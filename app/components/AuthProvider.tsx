@@ -55,9 +55,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async () => {
     try {
       const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account'
+      });
       await signInWithPopup(auth, provider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Sign in failed", error);
+      alert(`عذراً، فشل تسجيل الدخول: ${error.message} - جرب استخدام متصفح آخر أو كسر الحماية (Popup Blocker)`);
     }
   };
 
