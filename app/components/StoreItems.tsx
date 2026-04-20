@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Package, Music, Film, MessageSquare, Gamepad2, Loader2, CheckCircle2 } from "lucide-react";
+import { Package, Loader2, CheckCircle2 } from "lucide-react";
 import { doc, collection, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase/client";
 import { useAuth } from "./AuthProvider";
@@ -10,10 +10,6 @@ import { toast } from "sonner";
 
 export const ITEMS = [
   { id: 1, name: "كاب كات برو لمدة 7 أيام", price: 2, icon: <div title="منتج"><Package className="w-8 h-8 text-blue-500" /></div> },
-  { id: 2, name: "سبوتيفاي بريميوم 1 شهر", price: 5, icon: <div title="منتج"><Music className="w-8 h-8 text-green-500" /></div> },
-  { id: 3, name: "نتفلكس اللامحدود 1 شهر", price: 8, icon: <div title="منتج"><Film className="w-8 h-8 text-red-500" /></div> },
-  { id: 4, name: "ديسكورد نايترو 1 شهر", price: 10, icon: <div title="منتج"><MessageSquare className="w-8 h-8 text-indigo-500" /></div> },
-  { id: 5, name: "بطاقة ستيم بقيمة 20$", price: 20, icon: <div title="منتج"><Gamepad2 className="w-8 h-8 text-slate-700" /></div> },
 ];
 
 export function StoreItems({ balance }: { balance: number | null }) {
