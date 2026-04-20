@@ -1,0 +1,37 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile with coin balance",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "coins": { "type": "number", "minimum": 0 },
+        "createdAt": { "type": "number" }
+      },
+      "required": ["uid", "coins", "createdAt"]
+    },
+    "RewardCode": {
+      "title": "Reward Code",
+      "description": "A single-use code to claim coins",
+      "type": "object",
+      "properties": {
+        "code": { "type": "string" },
+        "coins": { "type": "number", "minimum": 1 },
+        "isUsed": { "type": "boolean" },
+        "usedBy": { "type": "string" }
+      },
+      "required": ["code", "coins", "isUsed"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles stored by their UID"
+    },
+    "/rewardCodes/{codeId}": {
+      "schema": { "$ref": "#/entities/RewardCode" },
+      "description": "Reward codes stored by an auto-generated or custom ID"
+    }
+  }
+}
