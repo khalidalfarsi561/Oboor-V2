@@ -60,6 +60,8 @@ export function SecretClient({ linkId, token }: { linkId: string, token: string 
           setErrorMessage("انتهت صلاحية الجلسة أو حاولت تكرار التخطي الوهمي. ارجع للصفحة الرئيسية وابدأ من جديد.");
         } else if (result.error?.includes("محاولة تجاوز")) {
           setErrorMessage("النظام رصد محاولة تجاوز أو تخطي غير منطقي للإعلانات بالرجوع السريع جداً! العب بإنصاف.");
+        } else if (result.error === "VPN_DETECTED") {
+          setErrorMessage("عذراً، محاولة الوصول مرفوضة لتفعيلك VPN أو Proxy. يرجى إيقافه والمحاولة مرة أخرى لحماية المعلنين.");
         } else {
           setErrorMessage(result.error || "حدث خطأ أثناء إصدار الكود.");
         }

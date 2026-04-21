@@ -154,6 +154,8 @@ export function HomeClient({ stockMap }: { stockMap: Record<number, number> | nu
                     if (res.success) {
                       toast.success("تم التوجيه نحو الرابط!", { id: "intent-toast" });
                       window.location.href = "https://short-jambo.ink/Gate";
+                    } else if (res.error === "VPN_DETECTED") {
+                      toast.error("عذراً، محاولة الوصول مرفوضة لتفعيلك VPN أو Proxy. يرجى إيقافه والمحاولة مرة أخرى لحماية المعلنين.", { id: "intent-toast", duration: 8000 });
                     } else {
                       toast.error(res.error || "حدث خطأ في النظام.", { id: "intent-toast" });
                     }
