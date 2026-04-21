@@ -51,11 +51,18 @@ export function SecretClient({ linkId, token }: { linkId: string, token: string 
     try {
       setStatus("checking");
       const result = await generateRewardCode(user.uid, linkId);
-      setGeneratedCode(result);
+      
+      if (!result.success || result.error) {
+        setStatus("denied");
+        setErrorMessage(result.error || "حدث خطأ أثناء إصدار الكود.");
+        return;
+      }
+      
+      setGeneratedCode(result.code!);
       setStatus("generated");
     } catch(err: unknown) {
       setStatus("denied");
-      setErrorMessage(err instanceof Error ? err.message : "حدث خطأ أثناء إصدار الكود، قد تكون استخدمت الحد الأقصى اليومي.");
+      setErrorMessage(err instanceof Error ? err.message : "حدث خطأ غير متوقع.");
       console.error(err);
     }
   };

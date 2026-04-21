@@ -33,9 +33,14 @@ export function HomeClient({ stockMap }: { stockMap: Record<number, number> | nu
 
     setClaiming(true);
     try {
-      const amount = await claimRewardCode(user.uid, code);
+      const result = await claimRewardCode(user.uid, code);
 
-      toast.success(`تم بنجاح! تمت إضافة ${amount}$ إلى رصيدك.`, {
+      if (!result.success || result.error) {
+        setErrorMsg(result.error || "حدث خطأ غير متوقع أثناء معالجة الكود.");
+        return;
+      }
+
+      toast.success(`تم بنجاح! تمت إضافة ${result.amount}$ إلى رصيدك.`, {
         icon: <CheckCircle2 className="text-green-500 w-5 h-5" />
       });
       setCode("");
@@ -135,12 +140,12 @@ export function HomeClient({ stockMap }: { stockMap: Record<number, number> | nu
                 تخطَ الرابط المختصر لاختبار سرعتك واحصل على كود بقيمة <strong className="text-blue-600">1$</strong> مجاناً كل 24 ساعة.
               </p>
               
-              <a 
-                href="https://short-jambo.ink/Gate" 
+              <Link 
+                href="/shortlink-demo" 
                 className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 sm:py-4 rounded-2xl font-semibold shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5 text-base sm:text-lg w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
               >
                 احصل على الكود الآن
-              </a>
+              </Link>
             </div>
           </div>
         </motion.section>
