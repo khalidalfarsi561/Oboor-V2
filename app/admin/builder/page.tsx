@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Reorder, motion, AnimatePresence } from "framer-motion";
 import { 
   Save, Loader2, Maximize, Palette, Settings, Type, Move, 
-  ChevronRight, Smartphone, Eye, Layout, Sliders, MousePointer2, Info 
+  ChevronRight, Smartphone, Eye, Layout, Sliders, MousePointer2, Info,
+  Sparkles, Send, Bot, RefreshCcw, X
 } from "lucide-react";
 import { toast } from "sonner";
+import { GoogleGenAI } from "@google/genai";
 import { saveSiteSettings } from "../../actions/admin";
 import { getFullSiteSettings } from "../../actions/settings";
 import { HomeHero } from "../../components/home/HomeHero";
@@ -22,7 +24,7 @@ const CONTROL_ELEMENTS = [
   { id: "login_btn", label: "زر تسجيل الدخول", type: "button", area: "header" },
   { id: "logout_btn", label: "زر خروج", type: "button", area: "header" },
   { id: "wallet", label: "بطاقة المحفظة", type: "element", area: "header" },
-  { id: "admin_btn", label: "زر لوحة التحكم (السريع)", type: "button", area: "header" },
+  { id: "icon_bg", label: "خلفية أيقونة الشعار", type: "element", area: "header" },
   { id: "hero", label: "قسم البطل (Hero)", type: "container", area: "content" },
   { id: "claim", label: "قسم استرداد الأكواد", type: "container", area: "content" },
   { id: "store", label: "قسم المتجر", type: "container", area: "content" },
@@ -51,7 +53,7 @@ const FocusWrapper = ({
 
   return (
     <div 
-      className={`relative group/focus ${className} transition-all`}
+      className={`relative group/focus ${className} cursor-crosshair transition-all`}
       onMouseEnter={() => setHoveredId(id)}
       onMouseLeave={() => setHoveredId(null)}
       onClick={(e) => {
@@ -69,15 +71,16 @@ const FocusWrapper = ({
               isSelected ? 'border-red-500 ring-4 ring-red-500/10' : 'border-blue-400 border-dashed'
             }`}
           >
-            <div className={`absolute -top-6 left-0 px-2 py-0.5 rounded text-[10px] font-bold text-white whitespace-nowrap shadow-sm ${
+            <div className={`absolute -top-6 left-0 px-2 py-0.5 rounded text-[10px] font-bold text-white whitespace-nowrap shadow-sm flex items-center gap-1 ${
               isSelected ? 'bg-red-500' : 'bg-blue-400'
             }`}>
-              {label} {isSelected && "• المحدد"}
+              <Sparkles className="w-2.5 h-2.5" />
+              {label} {isSelected && "• المحدد للذكاء الاصطناعي"}
             </div>
           </motion.div>
         )}
       </AnimatePresence>
-      <div className={isSelected ? 'relative z-10' : ''}>
+      <div className={`${isSelected ? 'relative z-10' : ''}`}>
         {children}
       </div>
     </div>
@@ -91,7 +94,10 @@ export default function VisualBuilder() {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
   const [viewMode, setViewMode] = useState<"desktop" | "mobile">("desktop");
+  const aiInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const load = async () => {
@@ -115,14 +121,61 @@ export default function VisualBuilder() {
     setSaving(false);
   };
 
-  const updateStyle = (id: string, field: string, value: any) => {
-    setDesign(prev => ({
-      ...prev,
-      [id]: {
-        ...(prev[id] || {}),
-        [field]: value
-      }
-    }));
+  const applyAiStyling = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!aiPrompt.trim() || aiLoading) return;
+    
+    setAiLoading(true);
+    const toastId = toast.loading("جاري تحليل طلبك وتنفيذ التعديلات...", { id: "ai-style" });
+
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      if (!apiKey) throw new Error("API key is not configured.");
+
+      const ai = new GoogleGenAI({ apiKey });
+      const currentElementStyle = design[selectedId || "global"] || {};
+      const elementName = CONTROL_ELEMENTS.find(e => e.id === selectedId)?.label || "Global Page";
+
+      const prompt = `You are an expert Frontend AI Stylist. 
+Selected Element: ${elementName} (id: ${selectedId || "global"})
+Current Style JSON: ${JSON.stringify(currentElementStyle)}
+User Request: ${aiPrompt}
+
+Rules:
+1. Return ONLY a valid JSON object representing the UPDATED style for THIS element.
+2. The style can include camelCase valid CSS properties that will be passed to a React 'style' prop.
+3. Common keys: bgColor, padding, radius, scale, color, fontWeight, fontSize, borderRadius, backgroundColor, etc.
+4. Support Arabic RTL context. Ensure colors are modern, vibrant, and professional.
+5. Do NOT include Markdown code blocks, only the JSON.
+
+Example Response: {"backgroundColor": "#ff0000", "padding": "20px", "borderRadius": "15px"}`;
+
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: prompt,
+      });
+
+      const rawJson = response.text?.replace(/```json|```/g, "").trim();
+      if (!rawJson) throw new Error("AI returned an empty response.");
+
+      const newStyles = JSON.parse(rawJson);
+      
+      setDesign(prev => ({
+        ...prev,
+        [selectedId || "global"]: {
+          ...prev[selectedId || "global"],
+          ...newStyles
+        }
+      }));
+      
+      setAiPrompt("");
+      toast.success("تم تنفيذ التعديل بنجاح عبر الذكاء الاصطناعي!", { id: "ai-style" });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`فشل التعديل: ${err.message}`, { id: "ai-style" });
+    } finally {
+      setAiLoading(false);
+    }
   };
 
   const getStyle = (id: string) => design[id] || {};
@@ -157,149 +210,181 @@ export default function VisualBuilder() {
   const selectedElement = CONTROL_ELEMENTS.find(e => e.id === selectedId);
 
   return (
-    <div className="w-full flex h-[calc(100vh-100px)] overflow-hidden bg-slate-950 rounded-[40px] border border-slate-800 shadow-2xl" dir="rtl">
+    <div className="w-full flex h-[calc(100vh-100px)] overflow-hidden bg-slate-950 rounded-[40px] border border-slate-800 shadow-2xl relative" dir="rtl">
       
-      {/* Sidebar Inspector (Right Side for RTL) */}
-      <aside className="w-80 border-r border-slate-800 bg-slate-900 overflow-y-auto flex flex-col shrink-0">
+      {/* Sidebar - UI Sections Ordering & Publishing */}
+      <aside className="w-72 border-r border-slate-800 bg-slate-900 overflow-y-auto flex flex-col shrink-0">
         <div className="p-6 border-b border-slate-800 bg-slate-800/30">
           <div className="flex items-center justify-between mb-4">
              <h2 className="font-bold text-white flex items-center gap-2">
-               <Settings className="w-5 h-5 text-red-500" />
-               المفتش (Inspector)
+               <Sparkles className="w-5 h-5 text-red-500" />
+               الذكاء الاصطناعي
              </h2>
              <button 
                disabled={saving}
                onClick={handleSave}
-               className="bg-red-600 hover:bg-red-700 text-white p-2 rounded-lg shadow-lg shadow-red-600/10 transition-all font-bold"
-               title="حفظ التغييرات"
+               className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg shadow-lg shadow-red-600/10 transition-all font-bold text-sm flex items-center gap-2"
              >
                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+               نشر الموقع
              </button>
           </div>
-          <p className="text-xs text-slate-500">اضغط على أي عنصر في المعاينة لتعديل خصائصه هنا فوراً.</p>
+          <p className="text-[10px] text-slate-500 font-medium">تم حذف التعديل اليدوي. استخدم ذكاء المنصة لتغيير أي شيء تراه في المعاينة.</p>
         </div>
 
-        <div className="flex-1 p-5">
-           <AnimatePresence mode="wait">
-             {selectedId ? (
-               <motion.div
-                 key={selectedId}
-                 initial={{ opacity: 0, scale: 0.95 }}
-                 animate={{ opacity: 1, scale: 1 }}
-                 className="flex flex-col gap-6"
-               >
-                 <div className="bg-slate-800/50 p-4 rounded-2xl border border-slate-700">
-                    <span className="text-[10px] uppercase font-black text-slate-600 block mb-1 tracking-tighter">العنصر المحدد</span>
-                    <h3 className="text-red-400 font-bold">{selectedElement?.label}</h3>
-                 </div>
+        <div className="flex-1 p-5 space-y-8">
+            <div className="bg-slate-800/20 p-4 rounded-3xl border border-slate-800">
+               <h3 className="text-xs font-black text-slate-600 uppercase mb-4 tracking-tighter">ترتيب عناصر الموقع</h3>
+               <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2">
+                 {items.map(it => (
+                   <Reorder.Item key={it} value={it} className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50 flex items-center justify-between cursor-grab group transition-all hover:bg-slate-800">
+                     <div className="flex items-center gap-3">
+                       <Move className="w-3 h-3 text-slate-500 group-hover:text-red-500" />
+                       <span className="text-[11px] font-bold text-slate-300 capitalize">{it}</span>
+                     </div>
+                   </Reorder.Item>
+                 ))}
+               </Reorder.Group>
+            </div>
 
-                 {/* Style Controls */}
-                 <div className="space-y-6">
-                    {/* Background */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-400">الخلفية</label>
-                      <div className="flex gap-2">
-                        <input type="color" value={getStyle(selectedId).bgColor || '#ffffff'} onChange={(e) => updateStyle(selectedId, 'bgColor', e.target.value)} className="w-10 h-8 rounded border-none bg-transparent cursor-pointer" />
-                        <input type="text" value={getStyle(selectedId).bgColor || ''} onChange={(e) => updateStyle(selectedId, 'bgColor', e.target.value)} className="flex-1 bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-xs text-slate-300" placeholder="#hex" />
-                      </div>
-                    </div>
-
-                    {/* Padding & Radius */}
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400">الحواف ({getStyle(selectedId).padding || 0}px)</label>
-                        <input type="range" min="0" max="60" value={getStyle(selectedId).padding || 0} onChange={(e) => updateStyle(selectedId, 'padding', parseInt(e.target.value))} className="w-full h-1.5 accent-red-500 bg-slate-800 rounded-lg appearance-none" />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400">الاستدارة ({getStyle(selectedId).radius || 0}px)</label>
-                        <input type="range" min="0" max="50" value={getStyle(selectedId).radius || 0} onChange={(e) => updateStyle(selectedId, 'radius', parseInt(e.target.value))} className="w-full h-1.5 accent-red-500 bg-slate-800 rounded-lg appearance-none" />
-                      </div>
-                    </div>
-
-                    {/* Scale */}
-                    <div className="space-y-2">
-                      <label className="text-xs font-bold text-slate-400">الحجم (×{getStyle(selectedId).scale || 1})</label>
-                      <input type="range" min="0.5" max="1.5" step="0.05" value={getStyle(selectedId).scale || 1} onChange={(e) => updateStyle(selectedId, 'scale', parseFloat(e.target.value))} className="w-full h-1.5 accent-red-500 bg-slate-800 rounded-lg appearance-none" />
-                    </div>
-
-                    <div className="pt-4 border-t border-slate-800">
-                       <label className="text-xs font-black text-slate-600 block mb-4 uppercase">ترتيب العناصر</label>
-                       <Reorder.Group axis="y" values={items} onReorder={setItems} className="space-y-2">
-                         {items.map(it => (
-                           <Reorder.Item key={it} value={it} className="bg-slate-800/80 p-3 rounded-xl border border-slate-700/50 flex items-center justify-between cursor-grab group">
-                             <div className="flex items-center gap-3">
-                               <Move className="w-3 h-3 text-slate-500 group-hover:text-red-500" />
-                               <span className="text-[11px] font-bold text-slate-300 capitalize">{it}</span>
-                             </div>
-                           </Reorder.Item>
-                         ))}
-                       </Reorder.Group>
-                    </div>
-                 </div>
-               </motion.div>
-             ) : (
-               <div className="h-full flex flex-col items-center justify-center text-center p-6 gap-4 text-slate-500">
-                  <MousePointer2 className="w-10 h-10 opacity-20" />
-                  <p className="text-sm italic">اضغط على أي جزء تفاعلي في معاينة الموقع للبدء في هندسته وتعديل ملامحه.</p>
-               </div>
-             )}
-           </AnimatePresence>
+            <div className="bg-slate-900 border border-slate-700/50 p-4 rounded-3xl">
+               <h4 className="text-xs font-bold text-white mb-2 flex items-center gap-2">
+                 <Bot className="w-4 h-4 text-red-500" />
+                 رؤية التصميم
+               </h4>
+               <p className="text-[10px] text-slate-400 leading-relaxed italic">&quot;تخيل موقعك كما تريده، وسأقوم بهندسته لك في ثوانٍ. اضغط على أي عنصر وابدأ الحوار.&quot;</p>
+            </div>
         </div>
       </aside>
 
-      {/* Main Canvas Workspace */}
-      <section className="flex-1 bg-slate-100 dark:bg-slate-950 overflow-y-auto relative p-10 flex justify-center items-start">
-        {/* Device Toggle */}
-        <div className="absolute top-4 inset-x-0 mx-auto w-fit bg-white/80 backdrop-blur border border-slate-200 p-1.5 rounded-2xl flex gap-1 z-50 shadow-sm shadow-slate-200/50">
-          <button onClick={() => setViewMode("desktop")} className={`p-2 rounded-xl transition-all ${viewMode === "desktop" ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}><Maximize className="w-4 h-4" /></button>
-          <button onClick={() => setViewMode("mobile")} className={`p-2 rounded-xl transition-all ${viewMode === "mobile" ? 'bg-slate-900 text-white shadow-lg' : 'text-slate-400 hover:bg-slate-50'}`}><Smartphone className="w-4 h-4" /></button>
+      {/* Workspace Canvas */}
+      <section className="flex-1 bg-[#0a0a0a] overflow-hidden relative flex flex-col">
+        {/* Device & Toolbar */}
+        <div className="h-16 border-b border-slate-800 bg-slate-900/50 flex items-center justify-between px-8 shrink-0 backdrop-blur-xl">
+           <div className="flex items-center gap-6">
+             <div className="flex bg-slate-950 p-1 rounded-xl border border-slate-800">
+               <button onClick={() => setViewMode("desktop")} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewMode === "desktop" ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}><Maximize className="w-3 h-3" /> ديسكتوب</button>
+               <button onClick={() => setViewMode("mobile")} className={`px-4 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-2 ${viewMode === "mobile" ? 'bg-red-600 text-white shadow-lg' : 'text-slate-500 hover:text-white'}`}><Smartphone className="w-3 h-3" /> جوال</button>
+             </div>
+             <div className="h-4 w-[1px] bg-slate-800" />
+             <div className="flex items-center gap-2 px-3 py-1 bg-slate-950 rounded-lg border border-slate-800">
+               <MousePointer2 className="w-3 h-3 text-red-500" />
+               <span className="text-[10px] font-black text-slate-500 uppercase">Focus & Annotate Mode ACTIVE</span>
+             </div>
+           </div>
+
+           <div className="flex items-center gap-4">
+              <button 
+                onClick={() => {
+                  setDesign({});
+                  toast.success("تم تصفير التصميم، عدنا للبداية!");
+                }}
+                className="text-xs text-slate-500 hover:text-white transition-all flex items-center gap-1"
+              >
+                <RefreshCcw className="w-3 h-3" /> تصفير
+              </button>
+           </div>
         </div>
 
-        <motion.div 
-          layout
-          className={`bg-slate-50 min-h-screen shadow-2xl transition-all duration-500 relative origin-top ${
-            viewMode === "mobile" ? 'w-[375px] rounded-[50px] border-[12px] border-slate-900 overflow-hidden' : 'w-full max-w-5xl rounded-3xl'
-          }`}
-        >
-          {/* Header Mock */}
-          <FocusWrapper id="nav" selectedId={selectedId} setSelectedId={setSelectedId} hoveredId={hoveredId} setHoveredId={setHoveredId}>
-            <header className="p-6 flex items-center justify-between bg-white/80 backdrop-blur-md border-b" style={getStyle("nav")}>
-              <FocusWrapper id="brand" selectedId={selectedId} setSelectedId={setSelectedId} hoveredId={hoveredId} setHoveredId={setHoveredId}>
-                <div className="flex items-center gap-3 bg-white border border-slate-200 pl-4 pr-3 py-1.5 rounded-2xl shadow-sm" style={getStyle("brand")}>
-                  <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20" style={getStyle("icon_bg")}>
-                    <Gift className="w-4 h-4 text-white" />
+        {/* Viewport Center */}
+        <div className="flex-1 overflow-y-auto p-12 flex justify-center items-start scrollbar-hide">
+          <motion.div 
+            layout
+            className={`bg-white min-h-screen shadow-[0_0_100px_rgba(0,0,0,0.5)] transition-all duration-700 relative origin-top ${
+              viewMode === "mobile" ? 'w-[375px] rounded-[50px] border-[12px] border-[#1a1a1a] overflow-hidden' : 'w-full max-w-5xl rounded-2xl'
+            }`}
+          >
+            {/* Real Header Mapping */}
+            <FocusWrapper id="nav" selectedId={selectedId} setSelectedId={setSelectedId} hoveredId={hoveredId} setHoveredId={setHoveredId}>
+              <header className="p-6 flex items-center justify-between border-b" style={getStyle("nav")}>
+                <FocusWrapper id="brand" selectedId={selectedId} setSelectedId={setSelectedId} hoveredId={hoveredId} setHoveredId={setHoveredId}>
+                  <div className="flex items-center gap-3 bg-white border border-slate-200 pl-4 pr-3 py-1.5 rounded-2xl shadow-sm" style={getStyle("brand")}>
+                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center" style={getStyle("icon_bg")}>
+                      <Gift className="w-4 h-4 text-white" />
+                    </div>
+                    <h1 className="text-sm font-bold text-slate-900" style={getStyle("brand_text")}>
+                      متجر <span className="text-blue-600" style={getStyle("accent_text")}>المكافآت</span>
+                    </h1>
                   </div>
-                  <h1 className="text-sm font-bold text-slate-900" style={getStyle("brand_text")}>
-                    متجر <span className="text-blue-600" style={getStyle("accent_text")}>المكافآت</span>
-                  </h1>
+                </FocusWrapper>
+
+                <div className="flex items-center gap-3">
+                   <FocusWrapper id="wallet" selectedId={selectedId} setSelectedId={setSelectedId} hoveredId={hoveredId} setHoveredId={setHoveredId}>
+                     <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border shadow-sm text-xs" style={getStyle("wallet")}>
+                       <span className="font-bold">$100.00</span>
+                       <Wallet className="w-4 h-4 text-blue-600" style={getStyle("wallet_icon")} />
+                     </div>
+                   </FocusWrapper>
+                   <FocusWrapper id="logout_btn" selectedId={selectedId} setSelectedId={setSelectedId} hoveredId={hoveredId} setHoveredId={setHoveredId}>
+                     <button className="p-2 text-slate-400" style={getStyle("logout_btn")}><LogOut className="w-4 h-4" /></button>
+                   </FocusWrapper>
                 </div>
-              </FocusWrapper>
+              </header>
+            </FocusWrapper>
 
-              <div className="flex items-center gap-3">
-                 <FocusWrapper id="wallet" selectedId={selectedId} setSelectedId={setSelectedId} hoveredId={hoveredId} setHoveredId={setHoveredId}>
-                   <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border shadow-sm text-xs" style={getStyle("wallet")}>
-                     <span className="font-bold">$100.00</span>
-                     <Wallet className="w-4 h-4 text-blue-600" style={getStyle("wallet_icon")} />
-                   </div>
-                 </FocusWrapper>
-                 <FocusWrapper id="logout_btn" selectedId={selectedId} setSelectedId={setSelectedId} hoveredId={hoveredId} setHoveredId={setHoveredId}>
-                   <button className="p-2 text-slate-400" style={getStyle("logout_btn")}><LogOut className="w-4 h-4" /></button>
-                 </FocusWrapper>
-              </div>
-            </header>
-          </FocusWrapper>
+            {/* Dynamic Content Sections */}
+            <div className="p-0">
+              {items.map(it => componentsMap[it])}
+            </div>
+          </motion.div>
+        </div>
 
-          {/* Actual Site Sections from items order */}
-          <div className="p-8">
-            {items.map(it => componentsMap[it])}
-          </div>
-
-          {/* Canvas Indicator */}
-          <div className="py-20 text-center opacity-10 flex flex-col items-center gap-2">
-            <Layout className="w-12 h-12" />
-            <span className="text-4xl font-black">END OF PAGE</span>
-          </div>
-        </motion.div>
+        {/* AI Command Center (Bottom Fixed Overlay) */}
+        <div className="absolute inset-x-0 bottom-10 flex justify-center px-10 pointer-events-none">
+           <AnimatePresence>
+             {selectedId ? (
+               <motion.div 
+                 initial={{ y: 50, opacity: 0 }}
+                 animate={{ y: 0, opacity: 1 }}
+                 exit={{ y: 50, opacity: 0 }}
+                 className="w-full max-w-2xl pointer-events-auto"
+               >
+                 <div className="bg-slate-900/90 backdrop-blur-2xl border border-slate-700 p-2 rounded-[32px] shadow-2xl flex items-center gap-3 ring-8 ring-slate-950/20">
+                    <div className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-full font-bold text-xs shrink-0 whitespace-nowrap">
+                       <Sparkles className="w-3 h-3 animate-pulse" />
+                       تعديل {selectedElement?.label}
+                    </div>
+                    <form onSubmit={applyAiStyling} className="flex-1 flex gap-2">
+                       <input 
+                         ref={aiInputRef}
+                         autoFocus
+                         type="text" 
+                         placeholder="أخبر الذكاء الاصطناعي ماذا تريد أن تفعل بهذا العنصر..." 
+                         className="flex-1 bg-transparent px-4 py-2 text-sm text-white focus:outline-none placeholder:text-slate-600"
+                         value={aiPrompt}
+                         onChange={(e) => setAiPrompt(e.target.value)}
+                         disabled={aiLoading}
+                       />
+                       <button 
+                         type="submit"
+                         disabled={aiLoading || !aiPrompt.trim()}
+                         className="p-3 bg-white text-slate-950 rounded-2xl hover:bg-red-500 hover:text-white transition-all disabled:opacity-30 flex items-center justify-center shrink-0"
+                       >
+                         {aiLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                       </button>
+                       <div className="w-[1px] h-6 bg-slate-800 self-center mx-1" />
+                       <button 
+                         type="button"
+                         onClick={() => setSelectedId(null)}
+                         className="p-3 text-slate-500 hover:text-white transition-all"
+                       >
+                         <X className="w-4 h-4" />
+                       </button>
+                    </form>
+                 </div>
+               </motion.div>
+             ) : (
+               <motion.div 
+                 initial={{ opacity: 0 }}
+                 animate={{ opacity: 1 }}
+                 className="text-xs bg-slate-900/50 backdrop-blur border border-slate-800 text-slate-500 px-6 py-3 rounded-full flex items-center gap-3"
+               >
+                 <Info className="w-4 h-4 text-blue-500" />
+                 اضغط على أي عنصر في المعاينة لتشغيل محرك تعديل الذكاء الاصطناعي
+               </motion.div>
+             )}
+           </AnimatePresence>
+        </div>
       </section>
     </div>
   );
