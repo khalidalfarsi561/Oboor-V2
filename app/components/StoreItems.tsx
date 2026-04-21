@@ -9,7 +9,9 @@ import { useAuth } from "./AuthProvider";
 import { toast } from "sonner";
 
 export const ITEMS = [
-  { id: 1, name: "كاب كات برو لمدة 7 أيام", price: 2, icon: <div title="منتج"><Package className="w-8 h-8 text-blue-500" /></div> },
+  { id: 1, name: "كاب كات برو لمدة 7 أيام", price: 2, stock: 10, icon: <div title="منتج"><Package className="w-8 h-8 text-blue-500" /></div> },
+  { id: 2, name: "حساب نتفلكس 30 يوم", price: 5, stock: 0, icon: <div title="منتج"><Package className="w-8 h-8 text-red-500" /></div> },
+  { id: 3, name: "بطاقة هدايا أبل 10$", price: 10, stock: 5, icon: <div title="منتج"><Package className="w-8 h-8 text-green-500" /></div> },
 ];
 
 export function StoreItems({ balance }: { balance: number | null }) {
@@ -26,6 +28,10 @@ export function StoreItems({ balance }: { balance: number | null }) {
   }, []);
 
   const handleBuy = async (item: typeof ITEMS[0]) => {
+    if (item.stock <= 0) {
+      toast.error("عذراً، هذا المنتج غير متوفر حالياً.");
+      return;
+    }
     if (!user) {
       toast.error("يرجى تسجيل الدخول أولاً لتتمكن من الشراء.");
       return;
@@ -121,10 +127,16 @@ export function StoreItems({ balance }: { balance: number | null }) {
                 <div className="mt-auto">
                   <button 
                     onClick={() => handleBuy(item)}
-                    disabled={purchasingId === item.id || purchasingId !== null}
-                    className="w-full py-3.5 rounded-xl bg-slate-900 text-white font-semibold hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    disabled={purchasingId === item.id || purchasingId !== null || item.stock <= 0}
+                    className={`w-full py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
+                      item.stock <= 0
+                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        : "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed"
+                    }`}
                   >
-                    {purchasingId === item.id ? (
+                    {item.stock <= 0 ? (
+                      "نفدت الكمية"
+                    ) : purchasingId === item.id ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       "شراء الآن"
