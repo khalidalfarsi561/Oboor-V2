@@ -1,34 +1,29 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, memo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Package, Loader2, CheckCircle2 } from "lucide-react";
-import { doc, collection, runTransaction, serverTimestamp } from "firebase/firestore";
+import { doc, collection, getDocs, runTransaction, serverTimestamp } from "firebase/firestore";
 import { db } from "../lib/firebase/client";
 import { useAuth } from "./AuthProvider";
 import { toast } from "sonner";
+import { ITEMS, StoreItem } from "../lib/data";
 
-export const ITEMS = [
-  { id: 1, name: "كاب كات برو لمدة 7 أيام", price: 2, stock: 10, icon: <div title="منتج"><Package className="w-8 h-8 text-blue-500" /></div> },
-  { id: 2, name: "حساب نتفلكس 30 يوم", price: 5, stock: 0, icon: <div title="منتج"><Package className="w-8 h-8 text-red-500" /></div> },
-  { id: 3, name: "بطاقة هدايا أبل 10$", price: 10, stock: 5, icon: <div title="منتج"><Package className="w-8 h-8 text-green-500" /></div> },
-];
-
-export function StoreItems({ balance }: { balance: number | null }) {
+export const StoreItems = memo(function StoreItems({ balance }: { balance: number | null }) {
   const { user } = useAuth();
-  const [loading, setLoading] = useState(true);
+  const [stockMap, setStockMap] = useState<Record<number, number>>({});
   const [purchasingId, setPurchasingId] = useState<number | null>(null);
 
   useEffect(() => {
-    // Simulate fetching items to show the skeleton loader requested
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    getDocs(collection(db, "storeItems")).then((snap) => {
+      const map: Record<number, number> = {};
+      snap.forEach((d) => { map[d.data().itemId] = d.data().stock; });
+      setStockMap(map);
+    });
   }, []);
 
-  const handleBuy = async (item: typeof ITEMS[0]) => {
-    if (item.stock <= 0) {
+  const handleBuy = async (item: StoreItem) => {
+    if ((stockMap[item.id] ?? 0) <= 0) {
       toast.error("عذراً، هذا المنتج غير متوفر حالياً.");
       return;
     }
@@ -73,9 +68,9 @@ export function StoreItems({ balance }: { balance: number | null }) {
       toast.success(`مبروك! تم شراء "${item.name}" بنجاح.`, {
         icon: <CheckCircle2 className="text-green-500 w-5 h-5" />
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Purchase error:", err);
-      toast.error(err.message || "حدث خطأ غير متوقع أثناء الشراء.");
+      toast.error(err instanceof Error ? err.message : "حدث خطأ غير متوقع أثناء الشراء.");
     } finally {
       setPurchasingId(null);
     }
@@ -89,25 +84,24 @@ export function StoreItems({ balance }: { balance: number | null }) {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
-          {loading ? (
-            // Skeleton Loaders
-            Array.from({ length: 5 }).map((_, i) => (
-              <motion.div
-                key={`skeleton-${i}`}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="bg-white border border-slate-100 p-8 rounded-[28px] shadow-sm flex flex-col items-start"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-slate-100 animate-pulse mb-6" />
-                <div className="h-6 w-3/4 bg-slate-100 animate-pulse rounded-lg mb-4" />
-                <div className="h-6 w-1/4 bg-slate-100 animate-pulse rounded-lg mb-8" />
-                <div className="mt-auto w-full h-12 bg-slate-100 animate-pulse rounded-xl" />
-              </motion.div>
-            ))
-          ) : (
-            ITEMS.map((item, i) => (
-              <motion.div
+          {/* Skeleton Loaders (commented for future use)
+          Array.from({ length: ITEMS.length }).map((_, i) => (
+            <motion.div
+              key={`skeleton-${i}`}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="bg-white border border-slate-100 p-8 rounded-[28px] shadow-sm flex flex-col items-start"
+            >
+              <div className="w-16 h-16 rounded-2xl bg-slate-100 animate-pulse mb-6" />
+              <div className="h-6 w-3/4 bg-slate-100 animate-pulse rounded-lg mb-4" />
+              <div className="h-6 w-1/4 bg-slate-100 animate-pulse rounded-lg mb-8" />
+              <div className="mt-auto w-full h-12 bg-slate-100 animate-pulse rounded-xl" />
+            </motion.div>
+          ))
+          */}
+          {ITEMS.map((item, i) => (
+            <motion.div
                 key={item.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -115,7 +109,7 @@ export function StoreItems({ balance }: { balance: number | null }) {
                 className="bg-white border border-slate-100 p-8 rounded-[28px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all group flex flex-col relative overflow-hidden"
               >
                 <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-blue-50 transition-all duration-300">
-                  {item.icon}
+                  <Package className={`w-8 h-8 ${item.iconColor}`} />
                 </div>
                 
                 <h3 className="font-bold text-xl text-slate-900 mb-2">{item.name}</h3>
@@ -127,27 +121,27 @@ export function StoreItems({ balance }: { balance: number | null }) {
                 <div className="mt-auto">
                   <button 
                     onClick={() => handleBuy(item)}
-                    disabled={purchasingId === item.id || purchasingId !== null || item.stock <= 0}
-                    className={`w-full py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${
-                      item.stock <= 0
+                    disabled={purchasingId === item.id || purchasingId !== null || (stockMap[item.id] ?? 0) <= 0}
+                    className={`w-full py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${(stockMap[item.id] ?? 0) <= 0
                         ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                        : purchasingId !== null && purchasingId !== item.id
+                        ? "bg-slate-900 text-white opacity-40 cursor-not-allowed"
                         : "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed"
                     }`}
                   >
-                    {item.stock <= 0 ? (
+                    {(stockMap[item.id] ?? 0) <= 0 ? (
                       "نفدت الكمية"
                     ) : purchasingId === item.id ? (
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       "شراء الآن"
                     )}
-                  </button>
-                </div>
-              </motion.div>
-            ))
-          )}
-        </AnimatePresence>
-      </div>
-    </section>
+            </button>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  </section>
   );
-}
+});

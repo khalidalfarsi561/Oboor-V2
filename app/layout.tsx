@@ -4,11 +4,27 @@ import './globals.css';
 import { AuthProvider } from './components/AuthProvider';
 import { Toaster } from 'sonner';
 
-const tajawal = Tajawal({ subsets: ['arabic'], weight: ['400', '500', '700', '800'] });
+const tajawal = Tajawal({
+  subsets: ['arabic'],
+  weight: ['400', '500', '700'],
+  display: 'swap',
+});
 
 export const metadata: Metadata = {
   title: 'متجر المكافآت',
-  description: 'احصل على رصيد مجاني عن طريق تخطي الروابط',
+  description: 'احصل على رصيد مجاني عن طريق تخطي الروابط واسترداده في متجر المكافآت.',
+  robots: { index: true, follow: true },
+  openGraph: {
+    title: 'متجر المكافآت',
+    description: 'احصل على رصيد مجاني عن طريق تخطي الروابط.',
+    type: 'website',
+    locale: 'ar_SA',
+  },
+  twitter: {
+    card: 'summary',
+    title: 'متجر المكافآت',
+    description: 'احصل على رصيد مجاني عن طريق تخطي الروابط.',
+  },
 };
 
 export default function RootLayout({children}: {children: React.ReactNode}) {

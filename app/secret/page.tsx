@@ -13,7 +13,6 @@ function SecretContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const linkId = searchParams.get("linkId");
-  const ref = searchParams.get("ref");
   
   const { user, loading, signIn } = useAuth();
   
@@ -33,15 +32,6 @@ function SecretContent() {
       setTimeout(() => {
         setStatus("denied");
         setErrorMessage("هذا الرابط غير صالح أو مفقود المعرّف.");
-      }, 0);
-      return;
-    }
-
-    // Basic referrer/ref security check to simulate "Only came from shortlink"
-    if (ref !== "shortjambo") {
-      setTimeout(() => {
-        setStatus("denied");
-        setErrorMessage("عذرا، لا يمكن الوصول لهذه الصفحة مباشرة. يجب استخدام الرابط الأساسي.");
       }, 0);
       return;
     }
@@ -71,14 +61,14 @@ function SecretContent() {
 
         setStatus("allowed");
 
-      } catch (err: any) {
+      } catch (err: unknown) {
         setStatus("denied");
-        setErrorMessage(err.message || "لا يمكن الوصول في الوقت الحالي.");
+        setErrorMessage(err instanceof Error ? err.message : "لا يمكن الوصول في الوقت الحالي.");
       }
     };
 
     checkAndGenerate();
-  }, [user, loading, linkId, ref]);
+  }, [user, loading, linkId]);
 
   const generateCode = async () => {
     if (!user || !linkId || status !== "allowed") return;
@@ -87,7 +77,13 @@ function SecretContent() {
       setStatus("checking");
       // Generate 8-char random alphanumeric code
       const result = await runTransaction(db, async (transaction) => {
-        const randomCode = Math.random().toString(36).substring(2, 10).toUpperCase();
+        const array = new Uint8Array(6);
+        crypto.getRandomValues(array);
+        const randomCode = Array.from(array)
+          .map((b) => b.toString(36).padStart(2, '0'))
+          .join('')
+          .substring(0, 8)
+          .toUpperCase();
         const codeRef = doc(db, "rewardCodes", randomCode);
         const codeSnap = await transaction.get(codeRef);
         
@@ -119,7 +115,7 @@ function SecretContent() {
 
       setGeneratedCode(result);
       setStatus("generated");
-    } catch(err: any) {
+    } catch(err: unknown) {
       setStatus("denied");
       setErrorMessage("حدث خطأ أثناء إصدار الكود، قد تكون استخدمت الحد الأقصى اليومي.");
       console.error(err);
@@ -225,7 +221,7 @@ function SecretContent() {
 
             {status === "denied" && (
               <div className="py-4">
-                <div className="w-20 h-20 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-8">
+                <div className="w-20 h-20 bg-red-50 rounded-2xl flex items-center justify-center mx-auto mb-8">
                   <AlertCircle className="w-10 h-10 text-red-500" strokeWidth={2.5} />
                 </div>
                 <h1 className="text-2xl font-bold text-slate-900 mb-4">تم الرفض</h1>
@@ -233,7 +229,7 @@ function SecretContent() {
                   {errorMessage}
                 </p>
 
-                {errorMessage.includes("ساعة") && (
+                {errorMessage.includes("ساعة") && process.env.NODE_ENV === 'development' && (
                   <button 
                     onClick={async () => {
                       if (!user || !linkId) return;

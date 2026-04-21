@@ -5,7 +5,7 @@ import { useAuth } from "./components/AuthProvider";
 import { doc, onSnapshot, runTransaction } from "firebase/firestore";
 import { db } from "./lib/firebase/client";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wallet, LogIn, LogOut, Gift, Loader2, History } from "lucide-react";
+import { Wallet, LogIn, LogOut, Gift, Loader2, History, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import confetti from "canvas-confetti";
 import Link from "next/link";
@@ -20,7 +20,8 @@ export default function HomePage() {
 
   useEffect(() => {
     if (!user) {
-      setTimeout(() => setBalance(null), 0);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setBalance(null);
       return;
     }
 
@@ -87,7 +88,7 @@ export default function HomePage() {
 
       // No manual setBalance here, the onSnapshot listener will update it automatically!
       toast.success(`تم بنجاح! تمت إضافة ${result}$ إلى رصيدك.`, {
-        icon: <CheckCircleIcon className="text-green-500 w-5 h-5" />
+        icon: <CheckCircle2 className="text-green-500 w-5 h-5" />
       });
       setCode("");
       
@@ -98,9 +99,9 @@ export default function HomePage() {
         colors: ["#2563eb", "#4f46e5", "#38bdf8"] // Deep blue & indigo colors
       });
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setErrorMsg(err.message || "حدث خطأ غير متوقع.");
+      setErrorMsg(err instanceof Error ? err.message : "حدث خطأ غير متوقع.");
     } finally {
       setClaiming(false);
     }
@@ -121,7 +122,7 @@ export default function HomePage() {
       <main className="max-w-5xl mx-auto px-6 py-10 relative z-10">
         
         {/* Navbar */}
-        <header className="flex flex-col md:flex-row items-center justify-between mb-20 gap-6">
+        <header className="flex flex-col md:flex-row items-center justify-between mb-10 md:mb-20 gap-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
               <Gift className="w-5 h-5 text-white" />
@@ -232,9 +233,7 @@ export default function HomePage() {
                 </div>
                 {errorMsg && (
                   <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} className="text-red-600 bg-red-50/50 border border-red-100 p-4 rounded-xl flex items-center gap-3 font-medium">
-                    <span className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
-                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-500"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
-                    </span>
+                    <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
                     <p className="text-sm md:text-base">{errorMsg}</p>
                   </motion.div>
                 )}
@@ -248,14 +247,5 @@ export default function HomePage() {
 
       </main>
     </div>
-  );
-}
-
-function CheckCircleIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...props} xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
-      <polyline points="22 4 12 14.01 9 11.01" />
-    </svg>
   );
 }

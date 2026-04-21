@@ -27,25 +27,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      setUser(currentUser);
-      
       if (currentUser) {
-        // Ensure user document exists
         const userRef = doc(db, "users", currentUser.uid);
-        const userSnap = await getDoc(userRef);
-        if (!userSnap.exists()) {
-          try {
-            await setDoc(userRef, {
-              uid: currentUser.uid,
-              balance: 0,
-              createdAt: serverTimestamp(),
-            });
-          } catch (error) {
-            console.error("Failed to create user profile:", error);
-          }
+        try {
+          await setDoc(userRef, {
+            uid: currentUser.uid,
+          }, { merge: true });
+        } catch (error: unknown) {
+          console.error("Failed to sync user profile:", error);
         }
       }
-      
+      setUser(currentUser);
       setLoading(false);
     });
 
@@ -59,16 +51,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         prompt: 'select_account'
       });
       await signInWithPopup(auth, provider);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Sign in failed", error);
-      alert(`عذراً، فشل تسجيل الدخول: ${error.message} - جرب استخدام متصفح آخر أو كسر الحماية (Popup Blocker)`);
+      alert(`عذراً، فشل تسجيل الدخول: ${error instanceof Error ? error.message : "خطأ غير معروف"} - جرب استخدام متصفح آخر أو كسر الحماية (Popup Blocker)`);
     }
   };
 
   const signOut = async () => {
     try {
       await firebaseSignOut(auth);
-    } catch (error) {
+    } catch (error: unknown) {
       console.error("Sign out failed", error);
     }
   };
