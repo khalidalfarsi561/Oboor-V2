@@ -62,3 +62,30 @@ export async function purchaseItem(userId: string, itemId: number, itemName: str
     });
   });
 }
+
+export async function toggleStockNotification(userId: string, itemId: number) {
+  if (!userId) throw new Error("يرجى تسجيل الدخول.");
+  
+  const docId = `${userId}_${itemId}`;
+  const notifyRef = adminDb.collection("stockNotifications").doc(docId);
+  const snap = await notifyRef.get();
+
+  if (snap.exists) {
+    await notifyRef.delete();
+    return { success: true, subscribed: false };
+  } else {
+    await notifyRef.set({
+      userId,
+      itemId,
+      createdAt: FieldValue.serverTimestamp()
+    });
+    return { success: true, subscribed: true };
+  }
+}
+
+export async function getSubscriptionStatus(userId: string, itemId: number) {
+  if (!userId) return false;
+  const docId = `${userId}_${itemId}`;
+  const snap = await adminDb.collection("stockNotifications").doc(docId).get();
+  return snap.exists;
+}

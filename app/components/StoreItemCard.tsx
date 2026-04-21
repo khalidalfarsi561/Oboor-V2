@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Package, Loader2 } from "lucide-react";
+import { Package, Loader2, Bell, BellOff } from "lucide-react";
 import { StoreItem } from "../lib/data";
+import { toggleStockNotification, getSubscriptionStatus } from "../actions/store";
+import { useAuth } from "./AuthProvider";
+import { toast } from "sonner";
 
 interface StoreItemCardProps {
   item: StoreItem;
@@ -12,16 +15,48 @@ interface StoreItemCardProps {
 }
 
 export function StoreItemCard({ item, stock, purchasingId, onBuy, index }: StoreItemCardProps) {
+  const { user, signIn } = useAuth();
   const isOutOfStock = stock <= 0;
   const isPurchasing = purchasingId === item.id;
   const isAnyPurchasing = purchasingId !== null;
+  
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [isToggling, setIsToggling] = useState(false);
+
+  useEffect(() => {
+    if (user && isOutOfStock) {
+      getSubscriptionStatus(user.uid, item.id).then(setIsSubscribed);
+    }
+  }, [user, item.id, isOutOfStock]);
+
+  const handleToggleNotify = async () => {
+    if (!user) {
+      toast.error("يرجى تسجيل الدخول لتفعيل التنبيهات.");
+      signIn(); // assuming it's available or just prompt login
+      return;
+    }
+    setIsToggling(true);
+    try {
+      const res = await toggleStockNotification(user.uid, item.id);
+      setIsSubscribed(res.subscribed || false);
+      if (res.subscribed) {
+        toast.success("تم تفعيل التنبيه! سنخبرك فور توفره.");
+      } else {
+        toast.info("تم إلغاء التنبيه.");
+      }
+    } catch (e: any) {
+      toast.error(e.message || "حدث خطأ.");
+    } finally {
+      setIsToggling(false);
+    }
+  };
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="bg-white border border-slate-100 p-8 rounded-[28px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all group flex flex-col relative overflow-hidden h-[340px] ui-reduced-motion"
+      className="bg-white border border-slate-100 p-8 rounded-[28px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all group flex flex-col relative overflow-hidden h-[360px] ui-reduced-motion"
       aria-busy={isPurchasing}
       aria-disabled={isOutOfStock}
     >
@@ -43,11 +78,11 @@ export function StoreItemCard({ item, stock, purchasingId, onBuy, index }: Store
       
       <h3 className="font-bold text-xl text-slate-900 mb-2">{item.name}</h3>
       
-      <div className="flex items-center gap-2 text-blue-600 font-bold text-2xl mb-8" dir="ltr">
+      <div className="flex items-center gap-2 text-blue-600 font-bold text-2xl mb-4" dir="ltr">
         <span>${item.price}</span>
       </div>
 
-      <div className="mt-auto">
+      <div className="mt-auto flex flex-col gap-2">
         <button 
           onClick={() => onBuy(item)}
           disabled={isAnyPurchasing || isOutOfStock}
@@ -67,6 +102,32 @@ export function StoreItemCard({ item, stock, purchasingId, onBuy, index }: Store
             "شراء الآن"
           )}
         </button>
+
+        {isOutOfStock && (
+          <button
+            onClick={handleToggleNotify}
+            disabled={isToggling}
+            className={`w-full py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+              isSubscribed 
+                ? "text-blue-600 bg-blue-50 hover:bg-blue-100" 
+                : "text-slate-600 bg-slate-50 hover:bg-slate-100"
+            }`}
+          >
+            {isToggling ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : isSubscribed ? (
+              <>
+                <BellOff className="w-4 h-4" />
+                إلغاء التنبيه
+              </>
+            ) : (
+              <>
+                <Bell className="w-4 h-4" />
+                أعلمني عند التوفر
+              </>
+            )}
+          </button>
+        )}
       </div>
     </motion.div>
   );

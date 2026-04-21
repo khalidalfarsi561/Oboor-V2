@@ -39,5 +39,14 @@ service cloud.firestore {
       allow read: if isSignedIn(); 
       allow write: if isAdmin();
     }
+
+    match /stockNotifications/{docId} {
+      allow read, write: if isSignedIn() && docId.matches(request.auth.uid + '_.*');
+    }
+
+    match /userNotifications/{docId} {
+      allow read: if isSignedIn() && (resource.data.userId == request.auth.uid || isAdmin());
+      allow write: if isAdmin();
+    }
   }
 }

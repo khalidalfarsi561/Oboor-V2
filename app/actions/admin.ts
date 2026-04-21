@@ -64,3 +64,38 @@ export async function getDashboardStats() {
     codesC: codesSnap.data().count
   };
 }
+
+export async function updateItemStock(itemId: number, newStock: number) {
+  try {
+    const stockDocs = await adminDb.collection("storeItems").where("itemId", "==", itemId).get();
+    if (stockDocs.empty) {
+      await adminDb.collection("storeItems").add({ itemId, stock: newStock });
+    } else {
+      await stockDocs.docs[0].ref.update({ stock: newStock });
+    }
+
+    // If stock became positive, "notify" users
+    if (newStock > 0) {
+      const subscriptions = await adminDb.collection("stockNotifications").where("itemId", "==", itemId).get();
+      
+      const batch = adminDb.batch();
+      subscriptions.docs.forEach(doc => {
+        const userId = doc.data().userId;
+        const msgRef = adminDb.collection("userNotifications").doc();
+        batch.set(msgRef, {
+          userId,
+          message: `المنتج الذي كنت تنتظره متوفر الآن!`,
+          type: "stock_update",
+          createdAt: new Date(),
+          read: false
+        });
+        batch.delete(doc.ref);
+      });
+      await batch.commit();
+    }
+
+    return { success: true };
+  } catch (e: any) {
+    return { success: false, error: e.message };
+  }
+}

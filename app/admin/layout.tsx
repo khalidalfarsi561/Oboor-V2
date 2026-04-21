@@ -60,7 +60,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <h2 className="text-xl font-bold text-white tracking-widest mb-10">اللوحة الخارقة</h2>
         
         <nav className="w-full flex-1 px-4 flex flex-col gap-2">
-          {React.isValidElement(children) && (children.props as any)?.tabs}
+          {children.props?.tabs}
           <Link href="/admin" className="px-4 py-3 rounded-xl bg-slate-800/50 hover:bg-red-600/10 text-slate-300 hover:text-red-400 transition-colors">نظرة عامة</Link>
           <Link href="/admin/builder" className="px-4 py-3 rounded-xl bg-slate-800/50 hover:bg-red-600/10 text-slate-300 hover:text-red-400 transition-colors">🌐 مهندس الواجهات المرئي</Link>
           <Link href="/admin/ai" className="px-4 py-3 rounded-xl bg-slate-800/50 hover:bg-red-600/10 text-slate-300 hover:text-red-400 transition-colors">🧠 مساعد الذكاء الاصطناعي</Link>
