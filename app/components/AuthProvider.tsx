@@ -1,11 +1,12 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState } from "react";
+import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { User, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut as firebaseSignOut } from "firebase/auth";
-import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db } from "../lib/firebase/client";
+import { auth } from "../lib/firebase/client";
+import { toast } from "sonner";
+import { bootstrapUser } from "../actions/auth";
 
-interface AuthContextType {
+export interface AuthContextType {
   user: User | null;
   loading: boolean;
   signIn: () => Promise<void>;
@@ -28,13 +29,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
-        const userRef = doc(db, "users", currentUser.uid);
         try {
-          await setDoc(userRef, {
-            uid: currentUser.uid,
-          }, { merge: true });
-        } catch (error: unknown) {
-          console.error("Failed to sync user profile:", error);
+          // Call Server Action to bootstrap user instead of client-side Firestore write
+          await bootstrapUser(currentUser.uid);
+        } catch (error) {
+          console.error("Failed to bootstrap user:", error);
         }
       }
       setUser(currentUser);
@@ -44,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => unsubscribe();
   }, []);
 
-  const signIn = async () => {
+  const signIn = useCallback(async () => {
     try {
       const provider = new GoogleAuthProvider();
       provider.setCustomParameters({
@@ -53,17 +52,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       await signInWithPopup(auth, provider);
     } catch (error: unknown) {
       console.error("Sign in failed", error);
-      alert(`عذراً، فشل تسجيل الدخول: ${error instanceof Error ? error.message : "خطأ غير معروف"} - جرب استخدام متصفح آخر أو كسر الحماية (Popup Blocker)`);
+      toast.error(`عذراً، فشل تسجيل الدخول: ${error instanceof Error ? error.message : "خطأ غير معروف"} - جرب استخدام متصفح آخر أو إيقاف مانع النوافذ المنبثقة`);
     }
-  };
+  }, []);
 
-  const signOut = async () => {
+  const signOut = useCallback(async () => {
     try {
       await firebaseSignOut(auth);
     } catch (error: unknown) {
       console.error("Sign out failed", error);
+      toast.error("حدث خطأ أثناء محاولة تسجيل الخروج.");
     }
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, loading, signIn, signOut }}>

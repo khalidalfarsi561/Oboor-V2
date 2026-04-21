@@ -2,26 +2,53 @@
   "entities": {
     "User": {
       "title": "User",
-      "description": "User profile with coin balance",
+      "description": "User profile with balance",
       "type": "object",
       "properties": {
         "uid": { "type": "string" },
-        "coins": { "type": "number", "minimum": 0 },
-        "createdAt": { "type": "number" }
+        "balance": { "type": "number", "minimum": 0 },
+        "createdAt": { "type": "object" }
       },
-      "required": ["uid", "coins", "createdAt"]
+      "required": ["uid", "balance", "createdAt"]
     },
     "RewardCode": {
       "title": "Reward Code",
-      "description": "A single-use code to claim coins",
+      "description": "A single-use code to claim amount",
       "type": "object",
       "properties": {
         "code": { "type": "string" },
-        "coins": { "type": "number", "minimum": 1 },
+        "amount": { "type": "number", "minimum": 1 },
         "isUsed": { "type": "boolean" },
-        "usedBy": { "type": "string" }
+        "generatedBy": { "type": "string" },
+        "usedBy": { "type": "string" },
+        "linkId": { "type": "string" },
+        "createdAt": { "type": "object" }
       },
-      "required": ["code", "coins", "isUsed"]
+      "required": ["code", "amount", "isUsed", "createdAt"]
+    },
+    "Purchase": {
+      "title": "Purchase",
+      "description": "A record of an item purchased by a user",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "itemId": { "type": "number" },
+        "itemName": { "type": "string" },
+        "price": { "type": "number", "minimum": 0 },
+        "createdAt": { "type": "object" }
+      },
+      "required": ["userId", "itemId", "itemName", "price", "createdAt"]
+    },
+    "LinkClaim": {
+      "title": "Link Claim",
+      "description": "Tracks the last time a user claimed a link",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "linkId": { "type": "string" },
+        "lastGeneratedAt": { "type": "object" }
+      },
+      "required": ["userId", "linkId", "lastGeneratedAt"]
     }
   },
   "firestore": {
@@ -31,7 +58,15 @@
     },
     "/rewardCodes/{codeId}": {
       "schema": { "$ref": "#/entities/RewardCode" },
-      "description": "Reward codes stored by an auto-generated or custom ID"
+      "description": "Reward codes"
+    },
+    "/purchases/{purchaseId}": {
+      "schema": { "$ref": "#/entities/Purchase" },
+      "description": "User purchases"
+    },
+    "/linkClaims/{claimId}": {
+      "schema": { "$ref": "#/entities/LinkClaim" },
+      "description": "Rate limiting claims for links"
     }
   }
 }

@@ -5,77 +5,23 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    function isValidId(id) { 
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); 
-    }
-    function incoming() { return request.resource.data; }
-    function existing() { return resource.data; }
     function isSignedIn() { return request.auth != null; }
 
     match /users/{userId} {
       allow read: if isSignedIn() && request.auth.uid == userId;
-      
-      allow create: if isSignedIn()
-        && request.auth.uid == userId
-        && isValidId(userId)
-        && incoming().uid == request.auth.uid
-        && incoming().createdAt == request.time;
-        
-      allow update: if isSignedIn()
-        && request.auth.uid == userId
-        && incoming().uid == existing().uid
-        && incoming().diff(existing()).affectedKeys().hasAny(['balance'])
-        && incoming().balance is number 
-        && incoming().balance >= 0;
     }
 
     match /purchases/{purchaseId} {
-      allow read: if isSignedIn() && existing().userId == request.auth.uid;
-      allow create: if isSignedIn()
-        && incoming().userId == request.auth.uid
-        && incoming().price is number
-        && incoming().itemId is number
-        && incoming().itemName is string
-        && incoming().createdAt == request.time;
+      allow read: if isSignedIn() && resource.data.userId == request.auth.uid;
     }
 
     match /linkClaims/{claimId} {
-      // Use claimId matching to avoid 'resource is null' errors when querying non-existent docs
       allow read: if isSignedIn() && claimId.matches(request.auth.uid + '_.*');
-      
-      // Allow deletion for our Dev Tool reset button
       allow delete: if isSignedIn() && claimId.matches(request.auth.uid + '_.*');
-      
-      allow create: if isSignedIn()
-        && claimId == request.auth.uid + "_" + incoming().linkId
-        && incoming().userId == request.auth.uid
-        && incoming().linkId is string
-        && incoming().lastGeneratedAt == request.time;
-
-      allow update: if isSignedIn()
-        && existing().userId == request.auth.uid
-        && incoming().userId == existing().userId
-        && incoming().lastGeneratedAt == request.time
-        && incoming().lastGeneratedAt.toMillis() >= existing().lastGeneratedAt.toMillis() + 86400000;
     }
 
     match /rewardCodes/{codeId} {
-      allow get: if isSignedIn();
-      allow list: if isSignedIn() && (existing().generatedBy == request.auth.uid || existing().usedBy == request.auth.uid);
-      
-      allow create: if isSignedIn()
-        && incoming().amount == 1
-        && incoming().isUsed == false
-        && incoming().generatedBy == request.auth.uid
-        && incoming().createdAt == request.time
-        // Must atomically touch linkClaims
-        && existsAfter(/databases/$(database)/documents/linkClaims/$(request.auth.uid + "_" + incoming().linkId));
-
-      allow update: if isSignedIn()
-        && existing().isUsed == false
-        && incoming().diff(existing()).affectedKeys().hasOnly(['isUsed', 'usedBy'])
-        && incoming().isUsed == true
-        && incoming().usedBy == request.auth.uid;
+      allow read: if isSignedIn(); 
     }
   }
 }

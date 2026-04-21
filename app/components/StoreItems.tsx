@@ -1,29 +1,20 @@
 "use client";
 
-import React, { useState, useEffect, memo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Package, Loader2, CheckCircle2 } from "lucide-react";
-import { doc, collection, getDocs, runTransaction, serverTimestamp } from "firebase/firestore";
-import { db } from "../lib/firebase/client";
+import React, { useState, memo } from "react";
+import { AnimatePresence } from "framer-motion";
+import { CheckCircle2 } from "lucide-react";
 import { useAuth } from "./AuthProvider";
 import { toast } from "sonner";
 import { ITEMS, StoreItem } from "../lib/data";
+import { purchaseItem } from "../actions/store";
+import { StoreItemCard, StoreItemSkeleton } from "./StoreItemCard";
 
-export const StoreItems = memo(function StoreItems({ balance }: { balance: number | null }) {
+export const StoreItems = memo(function StoreItems({ balance, stockMap }: { balance: number | null, stockMap: Record<number, number> | null }) {
   const { user } = useAuth();
-  const [stockMap, setStockMap] = useState<Record<number, number>>({});
   const [purchasingId, setPurchasingId] = useState<number | null>(null);
 
-  useEffect(() => {
-    getDocs(collection(db, "storeItems")).then((snap) => {
-      const map: Record<number, number> = {};
-      snap.forEach((d) => { map[d.data().itemId] = d.data().stock; });
-      setStockMap(map);
-    });
-  }, []);
-
   const handleBuy = async (item: StoreItem) => {
-    if ((stockMap[item.id] ?? 0) <= 0) {
+    if (!stockMap || (stockMap[item.id] ?? 0) <= 0) {
       toast.error("عذراً، هذا المنتج غير متوفر حالياً.");
       return;
     }
@@ -40,30 +31,7 @@ export const StoreItems = memo(function StoreItems({ balance }: { balance: numbe
 
     setPurchasingId(item.id);
     try {
-      await runTransaction(db, async (transaction) => {
-        const userRef = doc(db, "users", user.uid);
-        const userSnap = await transaction.get(userRef);
-        
-        if (!userSnap.exists()) throw new Error("المستخدم غير موجود.");
-        const currentBalance = userSnap.data().balance || 0;
-        
-        if (currentBalance < item.price) {
-          throw new Error("رصيد غير كافٍ.");
-        }
-
-        const newPurchaseRef = doc(collection(db, "purchases"));
-        transaction.set(newPurchaseRef, {
-          userId: user.uid,
-          itemId: item.id,
-          itemName: item.name,
-          price: item.price,
-          createdAt: serverTimestamp()
-        });
-
-        transaction.update(userRef, {
-          balance: currentBalance - item.price
-        });
-      });
+      await purchaseItem(user.uid, item.id, item.name, item.price);
 
       toast.success(`مبروك! تم شراء "${item.name}" بنجاح.`, {
         icon: <CheckCircle2 className="text-green-500 w-5 h-5" />
@@ -84,63 +52,23 @@ export const StoreItems = memo(function StoreItems({ balance }: { balance: numbe
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
         <AnimatePresence mode="popLayout">
-          {/* Skeleton Loaders (commented for future use)
-          Array.from({ length: ITEMS.length }).map((_, i) => (
-            <motion.div
-              key={`skeleton-${i}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="bg-white border border-slate-100 p-8 rounded-[28px] shadow-sm flex flex-col items-start"
-            >
-              <div className="w-16 h-16 rounded-2xl bg-slate-100 animate-pulse mb-6" />
-              <div className="h-6 w-3/4 bg-slate-100 animate-pulse rounded-lg mb-4" />
-              <div className="h-6 w-1/4 bg-slate-100 animate-pulse rounded-lg mb-8" />
-              <div className="mt-auto w-full h-12 bg-slate-100 animate-pulse rounded-xl" />
-            </motion.div>
-          ))
-          */}
-          {ITEMS.map((item, i) => (
-            <motion.div
+          {!stockMap ? (
+            Array.from({ length: ITEMS.length }).map((_, i) => (
+              <StoreItemSkeleton key={`skeleton-${i}`} />
+            ))
+          ) : (
+            ITEMS.map((item, i) => (
+              <StoreItemCard 
                 key={item.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.1 }}
-                className="bg-white border border-slate-100 p-8 rounded-[28px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all group flex flex-col relative overflow-hidden"
-              >
-                <div className="w-16 h-16 rounded-2xl bg-slate-50 flex items-center justify-center mb-6 group-hover:scale-110 group-hover:bg-blue-50 transition-all duration-300">
-                  <Package className={`w-8 h-8 ${item.iconColor}`} />
-                </div>
-                
-                <h3 className="font-bold text-xl text-slate-900 mb-2">{item.name}</h3>
-                
-                <div className="flex items-center gap-2 text-blue-600 font-bold text-2xl mb-8" dir="ltr">
-                  <span>${item.price}</span>
-                </div>
-
-                <div className="mt-auto">
-                  <button 
-                    onClick={() => handleBuy(item)}
-                    disabled={purchasingId === item.id || purchasingId !== null || (stockMap[item.id] ?? 0) <= 0}
-                    className={`w-full py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 ${(stockMap[item.id] ?? 0) <= 0
-                        ? "bg-slate-100 text-slate-400 cursor-not-allowed"
-                        : purchasingId !== null && purchasingId !== item.id
-                        ? "bg-slate-900 text-white opacity-40 cursor-not-allowed"
-                        : "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:translate-y-0 disabled:cursor-not-allowed"
-                    }`}
-                  >
-                    {(stockMap[item.id] ?? 0) <= 0 ? (
-                      "نفدت الكمية"
-                    ) : purchasingId === item.id ? (
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                    ) : (
-                      "شراء الآن"
-                    )}
-            </button>
-            </div>
-          </motion.div>
-        ))}
-      </AnimatePresence>
+                item={item}
+                stock={stockMap[item.id] ?? 0}
+                purchasingId={purchasingId}
+                onBuy={handleBuy}
+                index={i}
+              />
+            ))
+          )}
+        </AnimatePresence>
     </div>
   </section>
   );
