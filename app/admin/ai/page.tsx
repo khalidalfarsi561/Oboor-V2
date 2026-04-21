@@ -1,13 +1,13 @@
 "use client";
 
 import React, { useState } from "react";
-import { askAdminAI } from "../../actions/admin";
 import { Loader2, Send, Bot, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import { GoogleGenAI } from "@google/genai";
 
 export default function AiAssistant() {
   const [messages, setMessages] = useState<{role: 'user'|'ai', text: string}[]>([
-    { role: 'ai', text: 'أهلاً أيها القائد! أنا مساعدك المدعوم بأقوى النماذج (يعادل Gemma 31B و Gemini Pro) في الهندسة العكسية. أعرف بنية التخزين، المكونات، وواجهات الموقع. اسألني عن حالة النظام أو اطلب مني التعديلات!' }
+    { role: 'ai', text: 'أهلاً أيها القائد! أنا مساعدك المدعوم بأقوى النماذج في الهندسة العكسية. أعرف بنية التخزين، المكونات، وواجهات الموقع. اسألني عن حالة النظام أو اطلب مني التعديلات!' }
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,16 +21,34 @@ export default function AiAssistant() {
     setMessages(prev => [...prev, { role: 'user', text: userPrompt }]);
     setLoading(true);
 
-    const context = "User dashboard states: System is running smoothly. Drag and Drop builder is enabled.";
-    const res = await askAdminAI(userPrompt, context);
+    try {
+      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+      if (!apiKey) {
+        throw new Error("API key is not configured.");
+      }
 
-    if(res.success) {
-      setMessages(prev => [...prev, { role: 'ai', text: res.response! }]);
-    } else {
-      setMessages(prev => [...prev, { role: 'ai', text: `خطأ في الاتصال: ${res.error}` }]);
+      const ai = new GoogleGenAI({ apiKey });
+      const context = "User dashboard states: System is running smoothly. Drag and Drop builder is enabled.";
+      
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `You are the master site-managing AI assistant.
+Website Context: Next.js Vercel app matching Firestore rules. The Admin UI has visual drag and drop, and anti-fraud systems.
+Current Status: ${context}
+User Admin Query: ${userPrompt}`,
+      });
+
+      if (response.text) {
+        setMessages(prev => [...prev, { role: 'ai', text: response.text! }]);
+      } else {
+        throw new Error("No response from AI.");
+      }
+    } catch (err: any) {
+      console.error("AI Assistant Error:", err);
+      setMessages(prev => [...prev, { role: 'ai', text: `خطأ في الاتصال: ${err.message}` }]);
+    } finally {
+      setLoading(false);
     }
-    
-    setLoading(false);
   };
 
   return (

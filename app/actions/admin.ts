@@ -24,25 +24,6 @@ export async function verifyServerAdmin(uid: string, email: string): Promise<boo
   return false;
 }
 
-export async function askAdminAI(prompt: string, context: string): Promise<{ success: boolean; response?: string; error?: string }> {
-  try {
-    const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY });
-    // We use gemini-2.5-pro to emulate the deepest reasoning logic requested
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
-      contents: `You are the master site-managing AI assistant.
-Website Context: Next.js Vercel app matching Firestore rules. The Admin UI has visual drag and drop, and anti-fraud systems.
-Current Status: ${context}
-User Admin Query: ${prompt}`,
-    });
-    
-    return { success: true, response: response.text || "لا توجد استجابة." };
-  } catch (err: any) {
-    console.error(err);
-    return { success: false, error: err.message };
-  }
-}
-
 export async function saveSiteSettings(layoutOrder: string[], designSpecs?: any): Promise<{success: boolean; error?: string}> {
   try {
     const data: any = {

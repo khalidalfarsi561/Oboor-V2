@@ -1,5 +1,7 @@
 import { getDashboardStats } from "../actions/admin";
 
+export const dynamic = 'force-dynamic';
+
 export default async function AdminDashboard() {
   const stats = await getDashboardStats();
 
