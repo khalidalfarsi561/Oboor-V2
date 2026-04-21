@@ -135,12 +135,12 @@ export function HomeClient({ stockMap }: { stockMap: Record<number, number> | nu
                 تخطَ الرابط المختصر لاختبار سرعتك واحصل على كود بقيمة <strong className="text-blue-600">1$</strong> مجاناً كل 24 ساعة.
               </p>
               
-              <Link 
-                href="/shortlink-demo" 
+              <a 
+                href="https://short-jambo.ink/Gate" 
                 className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-8 py-3.5 sm:py-4 rounded-2xl font-semibold shadow-lg shadow-blue-600/20 transition-all hover:-translate-y-0.5 text-base sm:text-lg w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2"
               >
                 احصل على الكود الآن
-              </Link>
+              </a>
             </div>
           </div>
         </motion.section>

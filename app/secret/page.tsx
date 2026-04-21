@@ -9,6 +9,7 @@ interface SecretPageProps {
 export default async function SecretPage({ searchParams }: SecretPageProps) {
   const params = await searchParams;
   const linkId = params.linkId as string | undefined;
+  const token = params.token as string | undefined;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 sm:p-6 relative overflow-hidden">
@@ -19,7 +20,7 @@ export default async function SecretPage({ searchParams }: SecretPageProps) {
           <Loader2 className="w-10 h-10 animate-spin text-blue-600" />
         </div>
       }>
-        <SecretClient linkId={linkId || ""} />
+        <SecretClient linkId={linkId || ""} token={token || ""} />
       </Suspense>
     </div>
   );

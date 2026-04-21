@@ -10,7 +10,7 @@ import { generateRewardCode } from "../../actions/rewards";
 import { deleteDoc, doc } from "firebase/firestore";
 import { db } from "../../lib/firebase/client";
 
-export function SecretClient({ linkId }: { linkId: string }) {
+export function SecretClient({ linkId, token }: { linkId: string, token: string }) {
   const router = useRouter();
   const { user, loading, signIn } = useAuth();
   
@@ -31,9 +31,19 @@ export function SecretClient({ linkId }: { linkId: string }) {
       return;
     }
 
+    // Basic security token to prevent users from bypassing the shortlink by sharing the final target URL
+    const EXPECTED_TOKEN = "jambo-secure-77X"; // You can change this later
+    if (token !== EXPECTED_TOKEN) {
+      setTimeout(() => {
+        setStatus("denied");
+        setErrorMessage("عذراً، محاولة وصول غير مصرّح بها. يرجى استخدام الرابط الأساسي.");
+      }, 0);
+      return;
+    }
+
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setStatus("allowed");
-  }, [user, loading, linkId]);
+  }, [user, loading, linkId, token]);
 
   const generateCode = async () => {
     if (!user || !linkId || status !== "allowed") return;
