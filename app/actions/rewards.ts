@@ -13,11 +13,51 @@ function generateRandomCode(): string {
     .toUpperCase();
 }
 
+export async function initiateClaimIntent(userId: string, linkId: string): Promise<{ success: boolean; error?: string }> {
+  if (!userId || !linkId) return { success: false, error: "Missing parameters" };
+
+  try {
+    const intentRef = adminDb.collection('userIntents').doc(`${userId}_${linkId}`);
+    await intentRef.set({
+      userId,
+      linkId,
+      startedAt: FieldValue.serverTimestamp(),
+      status: 'pending'
+    });
+    return { success: true };
+  } catch (error: any) {
+    console.error("Error initiating intent:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function generateRewardCode(userId: string, linkId: string): Promise<{ success: boolean; code?: string; error?: string }> {
   if (!userId || !linkId) return { success: false, error: "Missing parameters" };
 
   try {
     const generatedCode = await adminDb.runTransaction(async (transaction) => {
+      // 1. Check intent BEFORE doing anything
+      const intentRef = adminDb.collection("userIntents").doc(`${userId}_${linkId}`);
+      const intentSnap = await transaction.get(intentRef);
+
+      if (!intentSnap.exists) {
+        throw new Error("عملية غير صالحة. يجب عليك النقر على زر التخطي من الصفحة الرئيسية أولاً.");
+      }
+
+      const intentData = intentSnap.data();
+      if (intentData?.status !== 'pending') {
+        throw new Error("عذراً، الرابط غير صالح حالياً أو تم استخدامه للتخطي مسبقاً. يرجى البدء من الزر في الصفحة الرئيسية.");
+      }
+
+      // Ads usually take time. To be very strictly mathematically sure they didn't just paste right away:
+      const startedAtTime = intentData?.startedAt?.toMillis() || Date.now();
+      const timeDiffSeconds = (Date.now() - startedAtTime) / 1000;
+      
+      // Assume at least 5 seconds are physically needed to click through the ad
+      if (timeDiffSeconds < 5) {
+        throw new Error("النظام رصد محاولة تجاوز للرابط المختصر! يجب عليك الانتظار والمرور بصفحات الإعلان بشكل طبيعي.");
+      }
+
       const claimId = `${userId}_${linkId}`;
       const claimRef = adminDb.collection("linkClaims").doc(claimId);
       const claimSnap = await transaction.get(claimRef);
@@ -55,6 +95,12 @@ export async function generateRewardCode(userId: string, linkId: string): Promis
         linkId,
         lastGeneratedAt: FieldValue.serverTimestamp()
       }, { merge: true });
+
+      // Invalidate intent so it can't be reused for bypassed regeneration
+      transaction.update(intentRef, {
+        status: 'completed',
+        completedAt: FieldValue.serverTimestamp()
+      });
 
       return randomCode;
     });

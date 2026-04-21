@@ -54,7 +54,15 @@ export function SecretClient({ linkId, token }: { linkId: string, token: string 
       
       if (!result.success || result.error) {
         setStatus("denied");
-        setErrorMessage(result.error || "حدث خطأ أثناء إصدار الكود.");
+        if (result.error?.includes("النقر على زر التخطي")) {
+          setErrorMessage("لا يمكنك الوصول المباشر لهذه الصفحة! يجب عليك البدء بالضغط على الزر من الصفحة الرئيسية لتخطي الرابط بشكل شرعي.");
+        } else if (result.error?.includes("الرابط غير صالح حالياً")) {
+          setErrorMessage("انتهت صلاحية الجلسة أو حاولت تكرار التخطي الوهمي. ارجع للصفحة الرئيسية وابدأ من جديد.");
+        } else if (result.error?.includes("محاولة تجاوز")) {
+          setErrorMessage("النظام رصد محاولة تجاوز أو تخطي غير منطقي للإعلانات بالرجوع السريع جداً! العب بإنصاف.");
+        } else {
+          setErrorMessage(result.error || "حدث خطأ أثناء إصدار الكود.");
+        }
         return;
       }
       
