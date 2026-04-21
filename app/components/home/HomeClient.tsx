@@ -6,15 +6,18 @@ import { useUserBalance } from "../../hooks/useUserBalance";
 import { motion, AnimatePresence } from "framer-motion";
 import { Wallet, LogIn, LogOut, Gift, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
+import Link from "next/link";
 import { StoreItems } from "../StoreItems";
+import { NotificationCenter } from "../NotificationCenter";
 import { claimRewardCode } from "../../actions/rewards";
 
 // Sub-components moved outside to fix Vercel "components during render" build error
-const HomeHero = ({ user, signIn }: { user: any, signIn: () => void }) => (
+const HomeHero = ({ user, signIn, style = {} }: { user: any, signIn: () => void, style?: any }) => (
   <motion.section 
     key="hero"
     initial={{ opacity: 0, y: 15 }}
     animate={{ opacity: 1, y: 0 }}
+    style={style}
     className="mb-8 md:mb-12 bg-white shadow-sm border border-slate-100 p-6 sm:p-8 md:p-12 rounded-[24px] sm:rounded-[32px] relative overflow-hidden"
   >
     <div className="absolute -top-32 -left-32 w-96 h-96 bg-blue-50 rounded-full blur-3xl pointer-events-none" />
@@ -58,14 +61,15 @@ const HomeHero = ({ user, signIn }: { user: any, signIn: () => void }) => (
   </motion.section>
 );
 
-const HomeClaim = ({ user, handleClaim, code, setCode, claiming, errorMsg, setErrorMsg }: { 
+const HomeClaim = ({ user, handleClaim, code, setCode, claiming, errorMsg, setErrorMsg, style = {} }: { 
   user: any, 
   handleClaim: (e: React.FormEvent) => void,
   code: string,
   setCode: (val: string) => void,
   claiming: boolean,
   errorMsg: string,
-  setErrorMsg: (val: string) => void
+  setErrorMsg: (val: string) => void,
+  style?: any
 }) => {
   if(!user) return null;
   return (
@@ -74,6 +78,7 @@ const HomeClaim = ({ user, handleClaim, code, setCode, claiming, errorMsg, setEr
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 0.1 }}
+      style={style}
       className="mb-12 md:mb-20 bg-slate-50 border border-slate-200 p-6 sm:p-8 md:p-10 rounded-[24px] sm:rounded-[32px]"
     >
       <div className="max-w-xl mx-auto md:mx-0 text-center md:text-right">
@@ -115,13 +120,28 @@ const HomeClaim = ({ user, handleClaim, code, setCode, claiming, errorMsg, setEr
   );
 };
 
-export function HomeClient({ stockMap, layoutOrder = ["hero", "claim", "store"] }: { stockMap: Record<number, number> | null, layoutOrder?: string[] }) {
+export function HomeClient({ stockMap, layoutOrder = ["hero", "claim", "store"], design = {} }: { stockMap: Record<number, number> | null, layoutOrder?: string[], design?: any }) {
   const { user, loading, signIn, signOut } = useAuth();
   const { balance, isBalanceLoading } = useUserBalance(user?.uid);
   
   const [code, setCode] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
   const [claiming, setClaiming] = useState(false);
+
+  // Dynamic Styles Mapping
+  const getStyle = (componentId: string) => {
+    return design[componentId] || {};
+  };
+
+  const commonSectionStyles = (id: string) => {
+    const s = getStyle(id);
+    return {
+      borderRadius: s.radius ? `${s.radius}px` : undefined,
+      backgroundColor: s.bgColor || undefined,
+      padding: s.padding ? `${s.padding}px` : undefined,
+      transform: s.scale ? `scale(${s.scale})` : undefined,
+    };
+  };
 
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -175,9 +195,9 @@ export function HomeClient({ stockMap, layoutOrder = ["hero", "claim", "store"] 
   }
 
   const componentsMap: Record<string, React.ReactNode> = {
-    hero: <HomeHero key="hero" user={user} signIn={signIn} />,
-    claim: <HomeClaim key="claim" user={user} handleClaim={handleClaim} code={code} setCode={setCode} claiming={claiming} errorMsg={errorMsg} setErrorMsg={setErrorMsg} />,
-    store: <StoreItems key="store" balance={balance} stockMap={stockMap} />,
+    hero: <HomeHero key="hero" user={user} signIn={signIn} style={commonSectionStyles("hero")} />,
+    claim: <HomeClaim key="claim" user={user} handleClaim={handleClaim} code={code} setCode={setCode} claiming={claiming} errorMsg={errorMsg} setErrorMsg={setErrorMsg} style={commonSectionStyles("claim")} />,
+    store: <StoreItems key="store" balance={balance} stockMap={stockMap} style={commonSectionStyles("store")} />,
   };
 
   return (
@@ -187,40 +207,54 @@ export function HomeClient({ stockMap, layoutOrder = ["hero", "claim", "store"] 
       <main className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-10 relative z-10">
         
         {/* Navbar */}
-        <header className="flex flex-col md:flex-row items-center justify-between mb-8 md:mb-16 gap-6">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20">
+        <header className="flex flex-row items-center justify-between mb-8 md:mb-16 group/nav" style={getStyle("nav")}>
+          <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md border border-slate-200/50 pl-6 pr-4 py-2 rounded-2xl shadow-sm hover:shadow-md transition-all hover:bg-white hover:-translate-y-0.5" style={getStyle("brand")}>
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20" style={getStyle("icon_bg")}>
               <Gift className="w-5 h-5 text-white" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900">
-              متجر <span className="text-blue-600">المكافآت</span>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900" style={getStyle("brand_text")}>
+              متجر <span className="text-blue-600" style={getStyle("accent_text")}>المكافآت</span>
             </h1>
           </div>
 
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 sm:gap-4 w-full md:w-auto">
+          <div className="flex flex-row items-center justify-center gap-3 sm:gap-4 w-full md:w-auto">
             {user ? (
               <>
-                <div className="flex items-center justify-center gap-2 bg-white shadow-sm border border-slate-200 px-5 py-2.5 rounded-full w-full sm:w-auto" dir="ltr" title="الرصيد/المحفظة">
+                <div className="flex items-center gap-2">
+                  {user.email === "khalidalfarsi1995@gmail.com" && (
+                    <Link 
+                      href="/admin" 
+                      className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white hover:bg-slate-800 transition-all hover:scale-110 shadow-lg shadow-slate-900/10"
+                      title="لوحة التحكم"
+                      style={getStyle("admin_btn")}
+                    >
+                      <Gift className="w-5 h-5" />
+                    </Link>
+                  )}
+                  <NotificationCenter userId={user.uid} />
+                </div>
+
+                <div className="flex items-center justify-center gap-2 bg-white shadow-sm border border-slate-200 px-4 py-2 rounded-full w-full sm:w-auto" dir="ltr" title="الرصيد/المحفظة" style={getStyle("wallet")}>
                   <AnimatePresence mode="popLayout">
                     <motion.span 
                       key={balance}
                       initial={{ opacity: 0, y: -5 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: 5 }}
-                      className="font-bold text-slate-800 text-lg inline-block"
+                      className="font-bold text-slate-800 text-base md:text-lg inline-block"
                     >
                       ${balance !== null ? balance : "..."} 
                     </motion.span>
                   </AnimatePresence>
-                  <Wallet className="w-5 h-5 text-blue-600" />
+                  <Wallet className="w-5 h-5 text-blue-600" style={getStyle("wallet_icon")} />
                 </div>
                 <button
                   onClick={signOut}
                   title="تسجيل الخروج"
-                  className="flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-500 hover:text-red-500 transition-colors w-full sm:w-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-full"
+                  className="flex items-center justify-center p-2 text-slate-400 hover:text-red-500 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded-full"
+                  style={getStyle("logout_btn")}
                 >
-                  <LogOut className="w-4 h-4 ml-1" />
-                  تسجيل خروج
+                  <LogOut className="w-5 h-5" />
                 </button>
               </>
             ) : (
@@ -228,6 +262,7 @@ export function HomeClient({ stockMap, layoutOrder = ["hero", "claim", "store"] 
                 onClick={signIn}
                 title="تسجيل الدخول"
                 className="flex items-center justify-center gap-2 bg-blue-700 text-white shadow-sm hover:shadow-lg hover:shadow-blue-700/20 px-7 py-2.5 rounded-full font-medium transition-all duration-200 w-full sm:w-auto hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-700 focus-visible:ring-offset-2"
+                style={getStyle("login_btn")}
               >
                 <LogIn className="w-4 h-4 ml-1" />
                 تسجيل الدخول

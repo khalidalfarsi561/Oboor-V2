@@ -43,12 +43,16 @@ User Admin Query: ${prompt}`,
   }
 }
 
-export async function saveSiteSettings(layoutOrder: string[]): Promise<{success: boolean; error?: string}> {
+export async function saveSiteSettings(layoutOrder: string[], designSpecs?: any): Promise<{success: boolean; error?: string}> {
   try {
-    await adminDb.collection('settings').doc('layout').set({
+    const data: any = {
       order: layoutOrder,
       updatedAt: new Date(),
-    }, { merge: true });
+    };
+    if (designSpecs) {
+      data.design = designSpecs;
+    }
+    await adminDb.collection('settings').doc('layout').set(data, { merge: true });
     return { success: true };
   } catch (e: any) {
     return { success: false, error: e.message };

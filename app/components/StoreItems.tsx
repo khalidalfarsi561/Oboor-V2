@@ -9,7 +9,7 @@ import { ITEMS, StoreItem } from "../lib/data";
 import { purchaseItem } from "../actions/store";
 import { StoreItemCard, StoreItemSkeleton } from "./StoreItemCard";
 
-export const StoreItems = memo(function StoreItems({ balance, stockMap }: { balance: number | null, stockMap: Record<number, number> | null }) {
+export const StoreItems = memo(function StoreItems({ balance, stockMap, style = {} }: { balance: number | null, stockMap: Record<number, number> | null, style?: any }) {
   const { user } = useAuth();
   const [purchasingId, setPurchasingId] = useState<number | null>(null);
 
@@ -45,7 +45,7 @@ export const StoreItems = memo(function StoreItems({ balance, stockMap }: { bala
   };
 
   return (
-    <section>
+    <section style={style}>
       <div className="flex items-center justify-between mb-10">
         <h2 className="text-2xl font-bold text-slate-900 tracking-tight">المنتجات المتوفرة</h2>
       </div>
