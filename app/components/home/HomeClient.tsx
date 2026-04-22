@@ -102,10 +102,10 @@ export function HomeClient({ stockMap, layoutOrder = ["hero", "claim", "store"],
         {/* Navbar */}
         <header className="flex flex-row items-center justify-between mb-8 md:mb-16 group/nav" style={getStyle("nav")}>
           <div className="flex items-center gap-3 bg-white/50 backdrop-blur-md border border-slate-200/50 pl-6 pr-4 py-2 rounded-2xl shadow-sm hover:shadow-md transition-all hover:bg-white hover:-translate-y-0.5" style={getStyle("brand")}>
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20" style={getStyle("icon_bg")}>
-              <Gift className="w-5 h-5 text-white" />
+            <div className="w-9 h-9 rounded-xl bg-blue-600 flex items-center justify-center shadow-lg shadow-blue-600/20 shrink-0" style={getStyle("icon_bg")}>
+              <Gift className="w-4 h-4 text-white" />
             </div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900" style={getStyle("brand_text")}>
+            <h1 className="text-xl font-bold tracking-tight text-slate-900 whitespace-nowrap" style={getStyle("brand_text")}>
               متجر <span className="text-blue-600" style={getStyle("accent_text")}>المكافآت</span>
             </h1>
           </div>

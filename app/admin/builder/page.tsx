@@ -299,10 +299,10 @@ Example Response: {"backgroundColor": "#ff0000", "padding": "20px", "borderRadiu
               <header className="p-6 flex items-center justify-between border-b" style={getStyle("nav")}>
                 <FocusWrapper id="brand" selectedId={selectedId} setSelectedId={setSelectedId} hoveredId={hoveredId} setHoveredId={setHoveredId}>
                   <div className="flex items-center gap-3 bg-white border border-slate-200 pl-4 pr-3 py-1.5 rounded-2xl shadow-sm" style={getStyle("brand")}>
-                    <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center" style={getStyle("icon_bg")}>
+                    <div className="w-9 h-9 rounded-lg bg-blue-600 flex items-center justify-center shrink-0" style={getStyle("icon_bg")}>
                       <Gift className="w-4 h-4 text-white" />
                     </div>
-                    <h1 className="text-sm font-bold text-slate-900" style={getStyle("brand_text")}>
+                    <h1 className="text-sm font-bold text-slate-900 whitespace-nowrap" style={getStyle("brand_text")}>
                       متجر <span className="text-blue-600" style={getStyle("accent_text")}>المكافآت</span>
                     </h1>
                   </div>
