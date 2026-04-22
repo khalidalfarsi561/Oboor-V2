@@ -1,54 +1,45 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useTransition } from "react";
 import { Loader2, Send, Bot, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
-import { GoogleGenAI } from "@google/genai";
+import { askAdminAI } from "../../actions/admin";
 
 export default function AiAssistant() {
   const [messages, setMessages] = useState<{role: 'user'|'ai', text: string}[]>([
     { role: 'ai', text: 'أهلاً أيها القائد! أنا مساعدك المدعوم بأقوى النماذج في الهندسة العكسية. أعرف بنية التخزين، المكونات، وواجهات الموقع. اسألني عن حالة النظام أو اطلب مني التعديلات!' }
   ]);
   const [input, setInput] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [isPending, startTransition] = useTransition();
 
   const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if(!input.trim()) return;
+    if(!input.trim() || isPending) return;
 
     const userPrompt = input.trim();
     setInput("");
     setMessages(prev => [...prev, { role: 'user', text: userPrompt }]);
-    setLoading(true);
 
-    try {
-      const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
-      if (!apiKey) {
-        throw new Error("API key is not configured.");
-      }
-
-      const ai = new GoogleGenAI({ apiKey });
-      const context = "User dashboard states: System is running smoothly. Drag and Drop builder is enabled.";
-      
-      const response = await ai.models.generateContent({
-        model: "gemini-3-flash-preview",
-        contents: `You are the master site-managing AI assistant.
+    startTransition(async () => {
+      try {
+        const context = "User dashboard states: System is running smoothly. Drag and Drop builder is enabled.";
+        const fullPrompt = `You are the master site-managing AI assistant.
 Website Context: Next.js Vercel app matching Firestore rules. The Admin UI has visual drag and drop, and anti-fraud systems.
 Current Status: ${context}
-User Admin Query: ${userPrompt}`,
-      });
+User Admin Query: ${userPrompt}`;
 
-      if (response.text) {
-        setMessages(prev => [...prev, { role: 'ai', text: response.text! }]);
-      } else {
-        throw new Error("No response from AI.");
+        const res = await askAdminAI(fullPrompt, []);
+        
+        if (res.success && res.text) {
+          setMessages(prev => [...prev, { role: 'ai', text: res.text! }]);
+        } else {
+          throw new Error(res.error || "No response from AI.");
+        }
+      } catch (err: any) {
+        console.error("AI Assistant Error:", err);
+        setMessages(prev => [...prev, { role: 'ai', text: `خطأ في الاتصال: ${err.message}` }]);
       }
-    } catch (err: any) {
-      console.error("AI Assistant Error:", err);
-      setMessages(prev => [...prev, { role: 'ai', text: `خطأ في الاتصال: ${err.message}` }]);
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -77,7 +68,7 @@ User Admin Query: ${userPrompt}`,
               </div>
             </div>
           ))}
-          {loading && (
+          {isPending && (
             <div className="flex gap-4">
               <div className="w-10 h-10 rounded-full bg-slate-800 border border-slate-700 flex items-center justify-center">
                 <Bot className="w-5 h-5 text-red-500 animate-pulse" />
@@ -97,11 +88,11 @@ User Admin Query: ${userPrompt}`,
             className="w-full bg-slate-950 border border-slate-800 focus:border-red-500 rounded-full px-8 py-5 pr-16 text-white placeholder:text-slate-600 focus:outline-none focus:ring-4 focus:ring-red-500/10 transition-all font-medium text-lg"
             value={input}
             onChange={e => setInput(e.target.value)}
-            disabled={loading}
+            disabled={isPending}
           />
           <button 
             type="submit" 
-            disabled={loading || !input.trim()}
+            disabled={isPending || !input.trim()}
             className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 bg-red-600 hover:bg-red-700 rounded-full flex items-center justify-center text-white transition-all disabled:opacity-50 disabled:hover:bg-red-600 focus:outline-square"
           >
             <Send className="w-5 h-5 ml-1" />

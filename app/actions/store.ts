@@ -89,3 +89,23 @@ export async function getSubscriptionStatus(userId: string, itemId: number) {
   const snap = await adminDb.collection("stockNotifications").doc(docId).get();
   return snap.exists;
 }
+
+export async function getStockNotificationMap(userId: string, itemIds: number[]) {
+  if (!userId || !itemIds.length) return {};
+  
+  try {
+    const snap = await adminDb.collection("stockNotifications")
+      .where("userId", "==", userId)
+      .where("itemId", "in", itemIds)
+      .get();
+
+    const map: Record<number, boolean> = {};
+    snap.docs.forEach(doc => {
+      map[doc.data().itemId] = true;
+    });
+    return map;
+  } catch (err) {
+    console.error("Error fetching notification map:", err);
+    return {};
+  }
+}

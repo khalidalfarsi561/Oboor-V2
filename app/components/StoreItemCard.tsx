@@ -12,51 +12,29 @@ interface StoreItemCardProps {
   purchasingId: number | null;
   onBuy: (item: StoreItem) => void;
   index: number;
+  isSubscribed?: boolean;
+  onToggleNotify?: () => void;
 }
 
-export function StoreItemCard({ item, stock, purchasingId, onBuy, index }: StoreItemCardProps) {
-  const { user, signIn } = useAuth();
+export function StoreItemCard({ 
+  item, 
+  stock, 
+  purchasingId, 
+  onBuy, 
+  index, 
+  isSubscribed = false, 
+  onToggleNotify 
+}: StoreItemCardProps) {
   const isOutOfStock = stock <= 0;
   const isPurchasing = purchasingId === item.id;
   const isAnyPurchasing = purchasingId !== null;
-  
-  const [isSubscribed, setIsSubscribed] = useState(false);
-  const [isToggling, setIsToggling] = useState(false);
-
-  useEffect(() => {
-    if (user && isOutOfStock) {
-      getSubscriptionStatus(user.uid, item.id).then(setIsSubscribed);
-    }
-  }, [user, item.id, isOutOfStock]);
-
-  const handleToggleNotify = async () => {
-    if (!user) {
-      toast.error("يرجى تسجيل الدخول لتفعيل التنبيهات.");
-      signIn(); // assuming it's available or just prompt login
-      return;
-    }
-    setIsToggling(true);
-    try {
-      const res = await toggleStockNotification(user.uid, item.id);
-      setIsSubscribed(res.subscribed || false);
-      if (res.subscribed) {
-        toast.success("تم تفعيل التنبيه! سنخبرك فور توفره.");
-      } else {
-        toast.info("تم إلغاء التنبيه.");
-      }
-    } catch (e: any) {
-      toast.error(e.message || "حدث خطأ.");
-    } finally {
-      setIsToggling(false);
-    }
-  };
   
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.1 }}
-      className="bg-white border border-slate-100 p-8 rounded-[28px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all group flex flex-col relative overflow-hidden h-[360px] ui-reduced-motion"
+      className="bg-white border border-slate-100 p-6 sm:p-8 rounded-[28px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] hover:-translate-y-1 transition-all group flex flex-col relative overflow-hidden min-h-[340px] sm:min-h-[360px] ui-reduced-motion"
       aria-busy={isPurchasing}
       aria-disabled={isOutOfStock}
     >
@@ -105,17 +83,14 @@ export function StoreItemCard({ item, stock, purchasingId, onBuy, index }: Store
 
         {isOutOfStock && (
           <button
-            onClick={handleToggleNotify}
-            disabled={isToggling}
-            className={`w-full py-2 rounded-lg text-sm font-medium flex items-center justify-center gap-2 transition-colors ${
+            onClick={onToggleNotify}
+            className={`w-full py-2.5 rounded-xl text-sm font-semibold flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95 ${
               isSubscribed 
                 ? "text-blue-600 bg-blue-50 hover:bg-blue-100" 
                 : "text-slate-600 bg-slate-50 hover:bg-slate-100"
             }`}
           >
-            {isToggling ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : isSubscribed ? (
+            {isSubscribed ? (
               <>
                 <BellOff className="w-4 h-4" />
                 إلغاء التنبيه
@@ -135,7 +110,7 @@ export function StoreItemCard({ item, stock, purchasingId, onBuy, index }: Store
 
 export function StoreItemSkeleton() {
   return (
-    <div className="bg-white border border-slate-100 p-8 rounded-[28px] shadow-sm flex flex-col items-start h-[340px]">
+    <div className="bg-white border border-slate-100 p-6 sm:p-8 rounded-[28px] shadow-sm flex flex-col items-start min-h-[340px] sm:min-h-[360px]">
       <div className="w-full flex justify-end mb-2">
         <div className="w-16 h-6 rounded-full bg-slate-100 animate-pulse" />
       </div>

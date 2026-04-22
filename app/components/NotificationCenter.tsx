@@ -1,42 +1,18 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
-import { Bell, Check, Trash2, Loader2, Info } from "lucide-react";
+import React, { useState } from "react";
+import { Bell, Check, Loader2, Info } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { getUserNotifications, markNotificationAsRead } from "../actions/notifications";
-import { toast } from "sonner";
+import { markNotificationAsRead } from "../actions/notifications";
+import { useUserNotifications } from "../hooks/useUserNotifications";
 
 export function NotificationCenter({ userId }: { userId: string }) {
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const { notifications, unreadCount, loading } = useUserNotifications(userId);
   const [isOpen, setIsOpen] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const fetchNotifications = useCallback(async () => {
-    if (!userId) return;
-    setLoading(true);
-    const data = await getUserNotifications(userId);
-    setNotifications(data);
-    setLoading(false);
-  }, [userId]);
-
-  useEffect(() => {
-    if (userId) {
-      // Use IIFE to satisfy lint rule about setState in effect
-      (async () => {
-        await fetchNotifications();
-      })();
-      
-      // Polling every 2 minutes for new notifications
-      const interval = setInterval(fetchNotifications, 120000);
-      return () => clearInterval(interval);
-    }
-  }, [userId, fetchNotifications]);
-
-  const unreadCount = notifications.filter(n => !n.read).length;
 
   const handleRead = async (id: string) => {
     await markNotificationAsRead(userId, id);
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    // State is updated automatically by onSnapshot hook
   };
 
   return (
@@ -91,7 +67,9 @@ export function NotificationCenter({ userId }: { userId: string }) {
                             {notif.message}
                           </p>
                           <span className="text-[10px] text-slate-400 mt-1 block">
-                            {new Date(notif.createdAt).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
+                            {notif.createdAt?.toDate 
+                              ? notif.createdAt.toDate().toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })
+                              : new Date(notif.createdAt).toLocaleString('ar-EG', { hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short' })}
                           </span>
                         </div>
                         {!notif.read && (

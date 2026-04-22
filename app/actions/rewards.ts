@@ -44,16 +44,25 @@ async function getClientFraudData() {
 async function detectVPN(ip: string): Promise<boolean> {
   if (!ip || ip === 'unknown' || ip === '127.0.0.1' || ip.startsWith('192.168.')) return false;
   
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000); 
+
   try {
-    const res = await fetch(`http://ip-api.com/json/${ip}?fields=proxy,hosting`, {
-      next: { revalidate: 3600 } // Cache results for 1 hour to prevent rate limiting
+    const res = await fetch(`https://ip-api.com/json/${ip}?fields=proxy,hosting,status`, {
+      signal: controller.signal,
+      next: { revalidate: 3600 } 
     });
+    
     if (!res.ok) return false;
     const data = await res.json();
-    return data.proxy === true || data.hosting === true;
-  } catch (error) {
-    console.error("VPN detection error:", error);
-    return false; // Fail open to not block real users if API is down
+    
+    if (data.status !== "success") return false;
+    return !!(data.proxy || data.hosting);
+  } catch (err) {
+    console.warn(`VPN detection failed for IP ${ip}:`, err);
+    return false; 
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 

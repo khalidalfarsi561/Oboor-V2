@@ -1,10 +1,10 @@
 "use client";
 
-import React from "react";
+import React, { CSSProperties } from "react";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 
-export const HomeHero = ({ user, signIn, style = {} }: { user: any, signIn: () => void, style?: any }) => (
+export const HomeHero = ({ user, signIn, style = {} }: { user: any, signIn: () => void, style?: CSSProperties }) => (
   <motion.section 
     key="hero"
     initial={{ opacity: 0, y: 15 }}

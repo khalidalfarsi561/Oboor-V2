@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { CSSProperties } from "react";
 import { motion } from "framer-motion";
 import { Loader2, AlertCircle } from "lucide-react";
 
@@ -12,7 +12,7 @@ export const HomeClaim = ({ user, handleClaim, code, setCode, claiming, errorMsg
   claiming: boolean,
   errorMsg: string,
   setErrorMsg: (val: string) => void,
-  style?: any
+  style?: CSSProperties
 }) => {
   if(!user) return null;
   return (
