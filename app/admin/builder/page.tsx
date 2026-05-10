@@ -109,10 +109,10 @@ export default function VisualBuilder() {
   const selectedElement = CONTROL_ELEMENTS.find(e => e.id === selectedId);
 
   return (
-    <div className="w-full flex h-[calc(100vh-100px)] overflow-hidden bg-slate-950 rounded-[40px] border border-slate-800 shadow-2xl relative" dir="rtl">
+    <div className="w-full flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-100px)] overflow-hidden bg-slate-950 rounded-[40px] border border-slate-800 shadow-2xl relative" dir="rtl">
       
       {/* Sidebar - UI Sections Ordering & Publishing */}
-      <aside className="w-72 border-r border-slate-800 bg-slate-900 overflow-y-auto flex flex-col shrink-0">
+      <aside className="w-full lg:w-72 border-r border-slate-800 bg-slate-900 overflow-y-auto flex flex-col shrink-0">
         <div className="p-6 border-b border-slate-800 bg-slate-800/30">
           <div className="flex items-center justify-between mb-4">
              <h2 className="font-bold text-white flex items-center gap-2">
