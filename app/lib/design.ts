@@ -1,46 +1,43 @@
-import React from "react";
+import { CSSProperties } from "react";
 
-export type LayoutSectionId = "hero" | "claim" | "store";
+export type LayoutSectionId = "hero" | "claim" | "store" | "nav";
 
 export type EditableElementId = 
-  | "nav" 
-  | "brand" 
-  | "brand_text" 
-  | "accent_text" 
-  | "login_btn" 
-  | "logout_btn" 
-  | "wallet" 
-  | "icon_bg" 
-  | "hero" 
-  | "claim" 
-  | "store"
-  | "global";
+  | "brand" | "brand_text" | "brand_desktop" | "accent_text" | "icon_bg" 
+  | "nav" | "login_btn" | "login_btn_mobile" | "wallet" | "wallet_mobile" | "wallet_icon"
+  | "admin_btn" | "logout_btn";
 
-export type DesignPatch = React.CSSProperties & { 
-  bgColor?: string; 
-  radius?: number; 
-  scale?: number; 
-  padding?: number | string;
-};
+export interface DesignPatch {
+  backgroundColor?: string;
+  color?: string;
+  fontSize?: string;
+  borderRadius?: string;
+  padding?: string;
+  margin?: string;
+  fontFamily?: string;
+  [key: string]: any;
+}
 
-export type SiteSettings = { 
-  order: LayoutSectionId[]; 
+export interface SiteSettings {
+  order: LayoutSectionId[];
   design: Record<string, DesignPatch>;
-};
+}
 
-/**
- * Normalizes the custom design patch into a standard React CSSProperties object.
- * (Task 3)
- */
-export function mapDesignPatchToStyle(patch: DesignPatch): React.CSSProperties {
-  const { bgColor, radius, scale, padding, ...rest } = patch;
+export function mapDesignPatchToStyle(patch: DesignPatch): CSSProperties {
+  const style: Record<string, any> = {};
   
-  const style: React.CSSProperties = { ...rest };
+  if (patch.backgroundColor) style.backgroundColor = patch.backgroundColor;
+  if (patch.color) style.color = patch.color;
+  if (patch.fontSize) style.fontSize = patch.fontSize;
+  if (patch.borderRadius) style.borderRadius = patch.borderRadius;
+  if (patch.padding) style.padding = patch.padding;
+  if (patch.margin) style.margin = patch.margin;
+  if (patch.fontFamily) style.fontFamily = patch.fontFamily;
   
-  if (bgColor) style.backgroundColor = bgColor;
-  if (radius !== undefined) style.borderRadius = `${radius}px`;
-  if (padding !== undefined) style.padding = typeof padding === 'number' ? `${padding}px` : padding;
-  if (scale !== undefined) style.transform = `scale(${scale})`;
-  
-  return style;
+  // Add other properties if needed
+  Object.keys(patch).forEach(key => {
+    if (!style[key]) style[key] = patch[key];
+  });
+
+  return style as CSSProperties;
 }

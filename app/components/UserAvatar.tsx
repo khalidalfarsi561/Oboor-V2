@@ -1,42 +1,31 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Image from "next/image";
-import { User } from "lucide-react";
 
 interface UserAvatarProps {
   src?: string | null;
   alt?: string | null;
   size?: number;
-  className?: string;
 }
 
-export function UserAvatar({ src, alt, size = 40, className = "" }: UserAvatarProps) {
-  const [error, setError] = useState(false);
+export function UserAvatar({ src, alt, size = 40 }: UserAvatarProps) {
+  const [error, setError] = React.useState(false);
 
-  if (!src || error) {
-    return (
-      <div 
-        className={`bg-slate-200 flex items-center justify-center rounded-full shrink-0 ${className}`}
-        style={{ width: size, height: size }}
-      >
-        <User className="text-slate-400" style={{ width: size * 0.6, height: size * 0.6 }} />
-      </div>
-    );
-  }
+  const fallback = `https://ui-avatars.com/api/?name=${encodeURIComponent(alt || "User")}&background=random`;
 
   return (
-    <div className={`relative shrink-0 overflow-hidden rounded-full ${className}`} style={{ width: size, height: size }}>
+    <div 
+      className="relative rounded-full overflow-hidden border-2 border-white shadow-sm shrink-0" 
+      style={{ width: size, height: size }}
+    >
       <Image
-        src={src}
-        alt={alt || "User Profile"}
-        width={size}
-        height={size}
-        referrerPolicy="no-referrer"
-        onError={() => setError(true)}
+        src={error || !src ? fallback : src}
+        alt={alt || "User Avatar"}
+        fill
         className="object-cover"
-        sizes={`${size}px`}
-        quality={90}
+        onError={() => setError(true)}
+        referrerPolicy="no-referrer"
       />
     </div>
   );

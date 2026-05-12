@@ -1,49 +1,12 @@
 @import "tailwindcss";
+@import "tw-animate-css";
 
 @layer base {
-  :root {
-    --font-sans: var(--font-inter);
-    --font-mono: var(--font-jetbrains-mono);
-  }
-
   body {
-    @apply antialiased text-slate-900 bg-white;
-    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
-  }
-
-  /* RTL Support for common props */
-  [dir="rtl"] {
-    @apply text-right;
-  }
-
-  /* Unified Focus Styles */
-  :focus-visible {
-    @apply outline-none ring-2 ring-blue-500 ring-offset-2;
+    @apply bg-slate-50 text-slate-900;
   }
 }
 
-@layer utilities {
-  .text-wrap-balance {
-    text-wrap: balance;
-  }
-  
-  .scrollbar-hide::-webkit-scrollbar {
-    display: none;
-  }
-  .scrollbar-hide {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
-
-  .ui-reduced-motion {
-    @media (prefers-reduced-motion: reduce) {
-      transition: none !important;
-      animation: none !important;
-    }
-  }
-
-  /* Custom Font requested by user */
-  .font-childos {
-    font-family: 'Childos Arabic', sans-serif;
-  }
+.font-childos {
+  font-family: 'Childos Arabic', sans-serif;
 }
